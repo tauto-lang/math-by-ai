@@ -1,0 +1,240 @@
+import std::prelude::Os
+import std::prelude::Shared
+
+// From this directory: tauto run --backend javascript --allow-read=. --allow-run=cp,tauto tests/check.taut
+// No dependencies outside math and std are needed by this runner.
+fn fail<T>(message: Text): T ! {stop} { perform stop(message) }
+fn temporary(): Text ! {fs_temp_dir, stop, Div} {
+  match perform fs_temp_dir() {
+    Ok(path) => path
+    Err(e) => fail(io_message(e))
+  }
+}
+fn remove(path: Text): Unit ! {fs_remove, stop, Div} {
+  match perform fs_remove(path) {
+    Ok(_) => ()
+    Err(e) => fail(io_message(e))
+  }
+}
+fn write(path: Text, text: Text): Unit ! {fs_write, stop, Div} {
+  match perform fs_write(path, text) {
+    Ok(_) => ()
+    Err(e) => fail(io_message(e))
+  }
+}
+fn run(program: Text, args: List(Text), dir: Text): ProcessOutput ! {proc_run, stop, Div} {
+  let p := Process { program: program, args: args, dir: dir, env: Nil, stdin: Bytes::of_text("") }
+  match perform proc_run(p) {
+    Ok(output) => output
+    Err(e) => fail(io_message(e))
+  }
+}
+fn output_text(output: ProcessOutput): Text ! {Div} {
+  let out := match Text::of_bytes(output.stdout) {
+    Some(t) => t
+    None => ""
+  }
+  concat(out, output.stderr)
+}
+fn contains(text: Text, needle: Text, i: u64): Bool ! {Div} {
+  if i + Text::len(needle) > Text::len(text) { false } else {
+    if Text::slice(
+      text,
+      i,
+      i + Text::len(needle)
+    ) == Some(needle) { true } else { contains(text, needle, i + 1) }
+  }
+}
+fn check(root: Text, path: Text, expected: Option(Text)): Unit ! {proc_run, stop, Div} {
+  let output := run("tauto", ["check", path, "--fresh"], root)
+  let diagnostic := output_text(output)
+  let ok := match expected {
+    None => output.status == Some(0)
+    Some(text) => output.status != Some(0) && contains(diagnostic, text, 0)
+  }
+  if ok { () } else { fail(concat(concat(path, " failed:\n"), diagnostic)) }
+}
+fn check_names(root: Text, dir: Text, names: List(Text)): Unit ! {proc_run, stop, Div} {
+  match names {
+    Nil => ()
+    Cons(name, rest) => {
+      let n := Text::len(name)
+      if n >= 5 && Text::slice(name, n - 5, n) == Some(".taut") {
+        check(root, concat(concat(dir, "/"), name), None)
+      } else { () }
+      check_names(root, dir, rest)
+    }
+  }
+}
+fn check_sources(root: Text, dir: Text): Unit ! {fs_list_dir, proc_run, stop, Div} {
+  let path := concat(concat(root, "/"), dir)
+  let names := match perform fs_list_dir(path) {
+    Ok(names) => names
+    Err(e) => fail(io_message(e))
+  }
+  check_names(root, dir, names)
+}
+fn rejection(
+  root: Text,
+  name: Text,
+  statement: Text,
+  diagnostic: Text
+): Unit ! {fs_write, proc_run, stop, Div} {
+  let path := concat(concat("examples/", name), ".taut")
+  let source := concat(
+    "import std::Base\nimport nat::notation\nimport algebra::notation\nimport algebra::group\nimport nat::arithmetic\nimport nat::relations\nimport nat::divisibility\ntheorem rejected(): ",
+    concat(
+      statement,
+      if name == "false_divisibility" { " { By(2, Refl) }\n" } else { " { Refl }\n" }
+    )
+  )
+  write(concat(concat(root, "/"), path), source)
+  check(root, path, Some(diagnostic))
+}
+
+fn reject_source(
+  root: Text,
+  name: Text,
+  source: Text,
+  diagnostic: Text
+): Unit ! {fs_write, proc_run, stop, Div} {
+  let path := concat(concat("examples/", name), ".taut")
+  write(concat(concat(root, "/"), path), source)
+  check(root, path, Some(diagnostic))
+}
+
+let temporary_dir := temporary()
+handle {
+  let root := concat(temporary_dir, "/math")
+  let copied := run("cp", ["-R", ".", root], "")
+  if copied.status == Some(0) { () } else { fail(output_text(copied)) }
+  check_sources(root, "totes/core/src")
+  check_sources(root, "totes/algebra/src")
+  check_sources(root, "totes/nat/src")
+  check_sources(root, "examples")
+  let callback_result := run(
+    "tauto",
+    ["run", "--backend", "javascript", "tests/highlight.taut"],
+    root
+  )
+  if callback_result.status == Some(0) { () } else { fail(output_text(callback_result)) }
+  let colored := run("tauto", ["highlight", "--tokens", "examples/notation.taut"], root)
+  if colored.status == Some(0) { () } else { fail(output_text(colored)) }
+  let colors := output_text(colored)
+  if (
+    contains(
+      colors,
+      "function f",
+      0
+    ) && contains(
+      colors,
+      "variable α",
+      0
+    ) && contains(
+      colors,
+      "operator ≤",
+      0
+    ) && contains(
+      colors,
+      "operator ⋆",
+      0
+    ) && contains(
+      colors,
+      "operator ∧",
+      0
+    ) && contains(colors, "function diff", 0) && contains(colors, "enumMember ε", 0)
+  ) { () } else { fail("missing syntax highlights") }
+
+  rejection(root, "false_natural", "nat_eq!(`1 + 2 = 4`)", "type mismatch")
+  rejection(
+    root,
+    "false_monoid",
+    "monoid_eq!(`${Nat::add}, ${0}; ${1} ⋆ ε = ${2}`)",
+    "type mismatch"
+  )
+  rejection(root, "bad_natural", "nat_eq!(`1 + = 2`)", "macro.syntax_error")
+  rejection(root, "bad_monoid", "monoid_eq!(`${Nat::add}, ${0}; ε ⋆ = ε`)", "macro.syntax_error")
+  rejection(root, "false_divisibility", "nat_rel!(`5 | 12`)", "type mismatch")
+  rejection(root, "bad_relation", "nat_rel!(`2 ≤`)", "macro.syntax_error")
+  let number_imports := "import std::Base\nimport nat::arithmetic\nimport nat::euclid\nimport nat::bezout\nimport nat::primes\nimport nat::primality\nimport nat::factorization\n"
+  reject_source(
+    root,
+    "wrong_gcd",
+    concat(number_imports, "theorem wrong(): gcd(48, 18) = 5 { Refl }\n"),
+    "type mismatch"
+  )
+  reject_source(
+    root,
+    "wrong_bezout",
+    concat(number_imports, "theorem wrong(): balance(30, 18, 6, Coeff(1, 0, 1, 0)) { Refl }\n"),
+    "type mismatch"
+  )
+  reject_source(
+    root,
+    "zero_is_not_prime",
+    concat(number_imports, "theorem wrong(): Prime(0) { is_prime_sound(0, Refl) }\n"),
+    "type mismatch"
+  )
+  reject_source(
+    root,
+    "composite_is_not_prime",
+    concat(number_imports, "theorem wrong(): Prime(91) { is_prime_sound(91, Refl) }\n"),
+    "type mismatch"
+  )
+  reject_source(
+    root,
+    "wrong_factorization",
+    concat(
+      number_imports,
+      "theorem wrong(): Factorization(12, Cons(2, Cons(5, Nil))) { Factored(PrimesCons(2, Cons(5, Nil), is_prime_sound(2, Refl), PrimesCons(5, Nil, is_prime_sound(5, Refl), PrimesNil)), Refl) }\n"
+    ),
+    "type mismatch"
+  )
+  reject_source(
+    root,
+    "non_decreasing",
+    "import std::Base\nfn diverge(n: Nat): Nat decreasing_by n { match n: Nat { Zero => 0\nSucc(k) => diverge(Succ(k)) } }\n",
+    "not structural"
+  )
+  let syntax_imports := "import std::Base\nimport core::notation\nimport algebra::notation\nimport algebra::semiring_notation\nimport nat::notation\nimport nat::integer_notation\n"
+  reject_source(
+    root,
+    "noncommutative_algebra",
+    concat(
+      syntax_imports,
+      "theorem wrong<A>(op: (A, A) -> A, unit: A, a: A, b: A): alg!(`op, unit; a ⋆ b = b ⋆ a`) { Refl }\n"
+    ),
+    "type mismatch"
+  )
+  reject_source(
+    root,
+    "noncommutative_semiring",
+    concat(
+      syntax_imports,
+      "theorem wrong<A>(add: (A, A) -> A, zero: A, mul: (A, A) -> A, one: A, a: A, b: A): semiring!(`add, zero, mul, one; a * b = b * a`) { Refl }\n"
+    ),
+    "type mismatch"
+  )
+  reject_source(
+    root,
+    "integer_is_not_truncated",
+    concat(syntax_imports, "theorem wrong(): int!(`2 - 5 = 0`) { Refl }\n"),
+    "type mismatch"
+  )
+  reject_source(
+    root,
+    "association_is_preserved",
+    concat(
+      syntax_imports,
+      "theorem wrong(a: Nat, b: Nat, c: Nat): nat!(`a + (b + c)`) = Nat::add(Nat::add(a, b), c) { Refl }\n"
+    ),
+    "type mismatch"
+  )
+} with {
+  stop(message) => {
+    remove(temporary_dir)
+    perform stop(message)
+  }
+  return value => remove(temporary_dir)
+}
+print("ok: standalone modules, examples, 16 rejection cases, and syntax highlights\n")

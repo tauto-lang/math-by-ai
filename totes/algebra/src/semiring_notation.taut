@@ -1,0 +1,132 @@
+import std::Base
+import std::prelude::Macro
+import core::highlight
+
+pub fn semiring_tokens(ts: List(SynTok)): List(SynHighlight) ! {Div} { math_tokens(ts) }
+
+syntax!(semiring_notation, ```par
+%start Expr
+%title "semiring expressions"
+%%
+Expr: Header Comma Header Comma Header Comma Header Semi Formula;
+Header: Name | Embed;
+Formula: Sum [ Equals Sum ];
+Sum: Prod { Plus Prod };
+Prod: Atom { Star Atom };
+Atom: ZeroLit | OneLit | Reference | Paren | Embed;
+Reference: Name [ Arguments ];
+Arguments: LParen Sum { Comma Sum } RParen;
+Paren: LParen Sum RParen;
+Embed: TautoExpr;
+Name: /[_\p{L}][_\p{L}\p{N}']*(::[_\p{L}][_\p{L}\p{N}']*)*/;
+ZeroLit: '0';
+OneLit: '1';
+Plus: '+';
+Star: '*';
+Comma: ',';
+Semi: ';';
+Equals: '=';
+LParen: '(';
+RParen: ')';
+```, with(tokens: semiring_tokens)) => struct Expr, enum Header, struct Formula, struct Formula_Opt1, struct Sum, struct Sum_Rep1, struct Prod, struct Prod_Rep1, enum Atom, struct Reference, struct Arguments, struct Arguments_Rep1, struct Paren, fn parse
+
+pub fn semiring_name(
+  t: SynToken
+): SynExpr { ExVar(SynIdent { name: t.text, ctx: t.ctx, span: t.span }) }
+pub fn semiring_header(h: semiring_notation::Header): SynExpr {
+  match h { Name(t) => semiring_name(t)
+    Embed(e) => e }
+}
+pub fn semiring_atom(
+  t: semiring_notation::Atom,
+  add: SynExpr,
+  zero: SynExpr,
+  mul: SynExpr,
+  one: SynExpr
+): SynExpr ! {macro_error, Div} {
+  match t {
+    ZeroLit(tok) => zero
+    OneLit(tok) => one
+    Embed(e) => e
+    Paren(p) => semiring_sum(p.sum, add, zero, mul, one)
+    Reference(r) => match r.arguments {
+      None => semiring_name(r.name)
+      Some(args) => ExApp(
+        semiring_name(r.name),
+        Cons(
+          semiring_sum(args.sum, add, zero, mul, one),
+          semiring_args(args.rep, add, zero, mul, one)
+        ),
+        r.span
+      )
+    }
+  }
+}
+pub fn semiring_args(
+  xs: List(semiring_notation::Arguments_Rep1),
+  add: SynExpr,
+  zero: SynExpr,
+  mul: SynExpr,
+  one: SynExpr
+): List(SynExpr) ! {macro_error, Div} {
+  match xs { Nil => Nil
+    Cons(x, rest) => Cons(
+      semiring_sum(x.sum, add, zero, mul, one),
+      semiring_args(rest, add, zero, mul, one)
+    ) }
+}
+pub fn semiring_factors(
+  acc: SynExpr,
+  xs: List(semiring_notation::Prod_Rep1),
+  add: SynExpr,
+  zero: SynExpr,
+  mul: SynExpr,
+  one: SynExpr
+): SynExpr ! {macro_error, Div} {
+  match xs { Nil => acc
+    Cons(x, rest) => { let b := semiring_atom(x.atom, add, zero, mul, one)
+      semiring_factors(quote { $mul($acc, $b) }, rest, add, zero, mul, one) }
+  }
+}
+pub fn semiring_product(
+  p: semiring_notation::Prod,
+  add: SynExpr,
+  zero: SynExpr,
+  mul: SynExpr,
+  one: SynExpr
+): SynExpr ! {macro_error, Div} {
+  semiring_factors(semiring_atom(p.atom, add, zero, mul, one), p.rep, add, zero, mul, one)
+}
+pub fn semiring_summands(
+  acc: SynExpr,
+  xs: List(semiring_notation::Sum_Rep1),
+  add: SynExpr,
+  zero: SynExpr,
+  mul: SynExpr,
+  one: SynExpr
+): SynExpr ! {macro_error, Div} {
+  match xs { Nil => acc
+    Cons(x, rest) => { let b := semiring_product(x.prod, add, zero, mul, one)
+      semiring_summands(quote { $add($acc, $b) }, rest, add, zero, mul, one) }
+  }
+}
+pub fn semiring_sum(
+  s: semiring_notation::Sum,
+  add: SynExpr,
+  zero: SynExpr,
+  mul: SynExpr,
+  one: SynExpr
+): SynExpr ! {macro_error, Div} {
+  semiring_summands(semiring_product(s.prod, add, zero, mul, one), s.rep, add, zero, mul, one)
+}
+pub macro fn semiring(e: semiring_notation::Expr): SynExpr ! {macro_error, Div} {
+  let add := semiring_header(e.header)
+  let zero := semiring_header(e.header_2)
+  let mul := semiring_header(e.header_3)
+  let one := semiring_header(e.header_4)
+  let left := semiring_sum(e.formula.sum, add, zero, mul, one)
+  match e.formula.opt { None => left
+    Some(r) => { let right := semiring_sum(r.sum, add, zero, mul, one)
+      quote { $left = $right } }
+  }
+}

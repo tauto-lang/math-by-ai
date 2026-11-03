@@ -1,0 +1,109 @@
+import std::Base
+import std::prelude::Macro
+import core::highlight
+import "order.taut"
+import "divisibility.taut"
+
+pub fn relation_tokens(ts: List(SynTok)): List(SynHighlight) ! {Div} { math_tokens(ts) }
+
+syntax!(nat_relations, ```par
+%start Expr
+%title "natural arithmetic"
+%%
+Expr: Sum Relation Sum;
+Relation: EqOp | LeOp | LtOp | DvdOp;
+DvdOp: '|';
+Sum: Prod { AddOp Prod };
+AddOp: Plus | Minus;
+Prod: Atom { Star Atom };
+Atom: Num | Reference | Paren | Embed;
+Reference: Name [ Arguments ];
+Arguments: LParen Sum { Comma Sum } RParen;
+Paren: LParen Sum RParen;
+Embed: TautoExpr;
+Name: /[_\p{L}][_\p{L}\p{N}']*(::[_\p{L}][_\p{L}\p{N}']*)*/;
+Num: /[0-9]+/;
+EqOp: '=';
+LeOp: '≤';
+LtOp: '<';
+Plus: '+';
+Minus: '-';
+Star: '*';
+Comma: ',';
+LParen: '(';
+RParen: ')';
+```, with(tokens: relation_tokens)) => struct Expr, enum Relation,
+  struct Sum, struct Sum_Rep1, enum AddOp, struct Prod, struct Prod_Rep1,
+  enum Atom, struct Reference, struct Arguments, struct Arguments_Rep1, struct Paren, fn parse
+
+pub fn relation_name(t: SynToken): SynExpr {
+  ExVar(SynIdent { name: t.text, ctx: t.ctx, span: t.span })
+}
+pub fn relation_arguments(
+  first: nat_relations::Sum,
+  rest: List(nat_relations::Arguments_Rep1)
+): List(SynExpr) ! {macro_error, Div} {
+  Cons(relation_sum(first), relation_more_arguments(rest))
+}
+pub fn relation_more_arguments(
+  rest: List(nat_relations::Arguments_Rep1)
+): List(SynExpr) ! {macro_error, Div} {
+  match rest { Nil => Nil
+    Cons(r, more) => Cons(relation_sum(r.sum), relation_more_arguments(more)) }
+}
+pub fn relation_atom(t: nat_relations::Atom): SynExpr ! {macro_error, Div} {
+  match t {
+    Num(tok) => ExNat(tok.text, tok.span)
+    Reference(r) => match r.arguments {
+      None => relation_name(r.name)
+      Some(args) => ExApp(relation_name(r.name), relation_arguments(args.sum, args.rep), r.span)
+    }
+    Paren(p) => relation_sum(p.sum)
+    Embed(e) => e
+  }
+}
+pub fn relation_factors(
+  acc: SynExpr,
+  rest: List(nat_relations::Prod_Rep1)
+): SynExpr ! {macro_error, Div} {
+  match rest { Nil => acc
+    Cons(r, more) => {
+      let t := relation_atom(r.atom)
+      relation_factors(quote { Nat::mul($acc, $t) }, more)
+    }
+  }
+}
+pub fn relation_product(p: nat_relations::Prod): SynExpr ! {macro_error, Div} {
+  relation_factors(relation_atom(p.atom), p.rep)
+}
+pub fn relation_summands(
+  acc: SynExpr,
+  rest: List(nat_relations::Sum_Rep1)
+): SynExpr ! {macro_error, Div} {
+  match rest { Nil => acc
+    Cons(r, more) => {
+      let t := relation_product(r.prod)
+      let next := match r.add_op {
+        Plus(tok) => quote { Nat::add($acc, $t) }
+        Minus(tok) => quote { Nat::sub($acc, $t) }
+      }
+      relation_summands(next, more)
+    }
+  }
+}
+pub fn relation_sum(s: nat_relations::Sum): SynExpr ! {macro_error, Div} {
+  relation_summands(relation_product(s.prod), s.rep)
+}
+pub fn relation_expression(e: nat_relations::Expr): SynExpr ! {macro_error, Div} {
+  let l := relation_sum(e.sum)
+  let b := relation_sum(e.sum_2)
+  match e.relation {
+    EqOp(tok) => quote { Eq(Nat, $l, $b) }
+    LeOp(tok) => quote { nat_below($l, $b) }
+    LtOp(tok) => quote { Eq(Bool, Nat::lt($l, $b), true) }
+    DvdOp(tok) => quote { Divides($l, $b) }
+  }
+}
+pub macro fn nat_rel(
+  e: nat_relations::Expr
+): SynExpr ! {macro_error, Div} { relation_expression(e) }

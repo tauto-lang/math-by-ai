@@ -1,0 +1,110 @@
+import std::Base
+import std::prelude::Macro
+import core::highlight
+
+pub fn nat_tokens(ts: List(SynTok)): List(SynHighlight) ! {Div} { math_tokens(ts) }
+
+syntax!(nat_notation, ```par
+%start Expr
+%title "natural arithmetic"
+%%
+Expr: Sum [ Relation Sum ];
+Relation: EqOp | LeOp | LtOp;
+Sum: Prod { AddOp Prod };
+AddOp: Plus | Minus;
+Prod: Atom { Star Atom };
+Atom: Num | Reference | Paren | Embed;
+Reference: Name [ Arguments ];
+Arguments: LParen Expr { Comma Expr } RParen;
+Paren: LParen Expr RParen;
+Embed: TautoExpr;
+Name: /[_\p{L}][_\p{L}\p{N}']*(::[_\p{L}][_\p{L}\p{N}']*)*/;
+Num: /[0-9]+/;
+EqOp: '=';
+LeOp: '≤';
+LtOp: '<';
+Plus: '+';
+Minus: '-';
+Star: '*';
+Comma: ',';
+LParen: '(';
+RParen: ')';
+```, with(tokens: nat_tokens)) => struct Expr, struct Expr_Opt1, enum Relation,
+  struct Sum, struct Sum_Rep1, enum AddOp, struct Prod, struct Prod_Rep1,
+  enum Atom, struct Reference, struct Arguments, struct Arguments_Rep1, struct Paren, fn parse
+
+pub fn nat_name(t: SynToken): SynExpr {
+  ExVar(SynIdent { name: t.text, ctx: t.ctx, span: t.span })
+}
+pub fn nat_arguments(
+  first: nat_notation::Expr,
+  rest: List(nat_notation::Arguments_Rep1)
+): List(SynExpr) ! {macro_error, Div} {
+  Cons(nat_expression(first), nat_more_arguments(rest))
+}
+pub fn nat_more_arguments(
+  rest: List(nat_notation::Arguments_Rep1)
+): List(SynExpr) ! {macro_error, Div} {
+  match rest { Nil => Nil
+    Cons(r, more) => Cons(nat_expression(r.expr), nat_more_arguments(more)) }
+}
+pub fn nat_atom(t: nat_notation::Atom): SynExpr ! {macro_error, Div} {
+  match t {
+    Num(tok) => ExNat(tok.text, tok.span)
+    Reference(r) => match r.arguments {
+      None => nat_name(r.name)
+      Some(args) => ExApp(nat_name(r.name), nat_arguments(args.expr, args.rep), r.span)
+    }
+    Paren(p) => nat_expression(p.expr)
+    Embed(e) => e
+  }
+}
+pub fn nat_factors(
+  acc: SynExpr,
+  rest: List(nat_notation::Prod_Rep1)
+): SynExpr ! {macro_error, Div} {
+  match rest { Nil => acc
+    Cons(r, more) => {
+      let t := nat_atom(r.atom)
+      nat_factors(quote { Nat::mul($acc, $t) }, more)
+    }
+  }
+}
+pub fn nat_product(p: nat_notation::Prod): SynExpr ! {macro_error, Div} {
+  nat_factors(nat_atom(p.atom), p.rep)
+}
+pub fn nat_summands(
+  acc: SynExpr,
+  rest: List(nat_notation::Sum_Rep1)
+): SynExpr ! {macro_error, Div} {
+  match rest { Nil => acc
+    Cons(r, more) => {
+      let t := nat_product(r.prod)
+      let next := match r.add_op {
+        Plus(tok) => quote { Nat::add($acc, $t) }
+        Minus(tok) => quote { Nat::sub($acc, $t) }
+      }
+      nat_summands(next, more)
+    }
+  }
+}
+pub fn nat_sum(s: nat_notation::Sum): SynExpr ! {macro_error, Div} {
+  nat_summands(nat_product(s.prod), s.rep)
+}
+pub fn nat_expression(e: nat_notation::Expr): SynExpr ! {macro_error, Div} {
+  let l := nat_sum(e.sum)
+  match e.opt {
+    None => l
+    Some(r) => {
+      let b := nat_sum(r.sum)
+      match r.relation {
+        EqOp(tok) => quote { Eq(Nat, $l, $b) }
+        LeOp(tok) => quote { Eq(Bool, Nat::le($l, $b), true) }
+        LtOp(tok) => quote { Eq(Bool, Nat::lt($l, $b), true) }
+      }
+    }
+  }
+}
+pub macro fn nat(e: nat_notation::Expr): SynExpr ! {macro_error, Div} { nat_expression(e) }
+// Compatibility name for existing users; the grammar now also accepts terms.
+pub macro fn nat_eq(e: nat_notation::Expr): SynExpr ! {macro_error, Div} { nat_expression(e) }

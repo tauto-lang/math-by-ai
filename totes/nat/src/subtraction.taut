@@ -1,0 +1,83 @@
+import std::Base
+import std::Nat
+import std::IntLaws
+import "notation.taut"
+import "relations.taut"
+import "divisibility.taut"
+
+pub theorem sub_common_right(a: Nat, b: Nat, c: Nat): nat!(`a + c - (b + c) = a - b`) {
+  match c: nat!(`a + c - (b + c) = a - b`) {
+    Zero => Refl
+    Succ(k) => calc nat!(`(a + Succ(k)) - (b + Succ(k))`) {
+      = nat!(`(a + k) - (b + k)`) from Nat::sub_succ_succ(nat!(`a + k`), nat!(`b + k`))
+      = nat!(`a - b`) from sub_common_right(a, b, k)
+    }
+  }
+}
+pub theorem mul_subtract(a: Nat, k: Nat, l: Nat): nat!(`a * (k - l) = a * k - a * l`) {
+  match k: nat!(`a * (k - l) = a * k - a * l`) {
+    Zero => Eq::trans(
+      Eq::congr((x: Nat) => nat!(`a * x`), Nat::sub_zero_left(l)),
+      Eq::trans(
+        Nat::mul_zero_right(a),
+        Eq::sym(
+          Eq::trans(
+            Eq::congr((x: Nat) => nat!(`x - a * l`), Nat::mul_zero_right(a)),
+            Nat::sub_zero_left(nat!(`a * l`))
+          )
+        )
+      )
+    )
+    Succ(j) => match l: nat!(`a * (Succ(j) - l) = a * Succ(j) - a * l`) {
+      Zero => Eq::sym(Eq::congr((x: Nat) => nat!(`a * Succ(j) - x`), Nat::mul_zero_right(a)))
+      Succ(i) => Eq::trans(
+        Eq::congr((x: Nat) => nat!(`a * x`), Nat::sub_succ_succ(j, i)),
+        Eq::trans(
+          mul_subtract(a, j, i),
+          Eq::sym(
+            Eq::trans(
+              Eq::congr((x: Nat) => nat!(`x - a * Succ(i)`), Nat::mul_succ_right(a, j)),
+              Eq::trans(
+                Eq::congr((x: Nat) => nat!(`a * j + a - x`), Nat::mul_succ_right(a, i)),
+                sub_common_right(nat!(`a * j`), nat!(`a * i`), a)
+              )
+            )
+          )
+        )
+      )
+    }
+  }
+}
+pub theorem divides_subtract(
+  a: Nat,
+  b: Nat,
+  c: Nat,
+  ab: nat_rel!(`a | b`),
+  ac: nat_rel!(`a | c`)
+): nat_rel!(`a | b - c`) {
+  match ab: nat_rel!(`a | b - c`) {
+    By(k, hk) => match ac: nat_rel!(`a | b - c`) {
+      By(l, hl) => By(
+        nat!(`k - l`),
+        calc nat!(`a * (k - l)`) {
+          = nat!(`a * k - a * l`) from mul_subtract(a, k, l)
+          = nat!(`b - a * l`) from Eq::congr((x: Nat) => nat!(`x - a * l`), hk)
+          = nat!(`b - c`) from Eq::congr((x: Nat) => nat!(`b - x`), hl)
+        }
+      )
+    }
+  }
+}
+pub theorem sub_sum_left(a: Nat, b: Nat): nat!(`a + b - a = b`) {
+  match a: nat!(`a + b - a = b`) {
+    Zero => Nat::add_zero_left(b)
+    Succ(k) => calc nat!(`Succ(k) + b - Succ(k)`) {
+      = nat!(`Succ(k + b) - Succ(k)`) from Eq::congr(
+        (x: Nat) => nat!(`x - Succ(k)`),
+        Nat::add_succ_left(k, b)
+      )
+      = nat!(`k + b - k`) from Nat::sub_succ_succ(nat!(`k + b`), k)
+      = b from sub_sum_left(k, b)
+    }
+  }
+}

@@ -1,0 +1,164 @@
+import std::Base
+import "notation.taut"
+import core::equality
+
+// The operation is a parameter: one carrier can have several monoids.
+pub(open) inductive Monoid(A: Type, op: (A, A) -> A, unit: A): Prop {
+  Mk(
+    assoc: (a: A, b: A, c: A) -> alg!(`op, unit; a ⋆ b ⋆ c = a ⋆ (b ⋆ c)`),
+    left_unit: (a: A) -> alg!(`op, unit; ε ⋆ a = a`),
+    right_unit: (a: A) -> alg!(`op, unit; a ⋆ ε = a`)
+  ): Monoid(A, op, unit)
+}
+
+pub theorem assoc<A>(
+  op: (A, A) -> A,
+  unit: A,
+  m: Monoid(A, op, unit),
+  a: A,
+  b: A,
+  c: A
+): alg!(`op, unit; a ⋆ b ⋆ c = a ⋆ (b ⋆ c)`) {
+  match m: alg!(`op, unit; a ⋆ b ⋆ c = a ⋆ (b ⋆ c)`) {
+    Mk(h, l, r) => h(a, b, c)
+  }
+}
+pub theorem left_unit<A>(
+  op: (A, A) -> A,
+  unit: A,
+  m: Monoid(A, op, unit),
+  a: A
+): alg!(`op, unit; ε ⋆ a = a`) {
+  match m: alg!(`op, unit; ε ⋆ a = a`) { Mk(h, l, r) => l(a) }
+}
+pub theorem right_unit<A>(
+  op: (A, A) -> A,
+  unit: A,
+  m: Monoid(A, op, unit),
+  a: A
+): alg!(`op, unit; a ⋆ ε = a`) {
+  match m: alg!(`op, unit; a ⋆ ε = a`) { Mk(h, l, r) => r(a) }
+}
+
+pub fn product<A>(op: (A, A) -> A, unit: A, xs: List(A)): A {
+  match xs: A { Nil => unit
+    Cons(x, rest) => alg!(`op, unit; x ⋆ product(op, ε, rest)`) }
+}
+
+pub theorem product_append<A>(
+  op: (A, A) -> A,
+  unit: A,
+  m: Monoid(A, op, unit),
+  xs: List(A),
+  ys: List(A)
+): alg!(`op, unit; product(op, ε, List::append(xs, ys)) = product(op, ε, xs) ⋆ product(op, ε, ys)`) {
+  match xs: alg!(
+    `op, unit; product(op, ε, List::append(xs, ys)) = product(op, ε, xs) ⋆ product(op, ε, ys)`
+  ) {
+    Nil => Eq::sym(left_unit(op, unit, m, product(op, unit, ys)))
+    Cons(x, rest) => calc alg!(`op, unit; x ⋆ product(op, ε, List::append(rest, ys))`) {
+      = alg!(`op, unit; x ⋆ (product(op, ε, rest) ⋆ product(op, ε, ys))`) from Eq::congr(
+        (v: A) => alg!(`op, unit; x ⋆ v`),
+        product_append(op, unit, m, rest, ys)
+      )
+      = alg!(`op, unit; x ⋆ product(op, ε, rest) ⋆ product(op, ε, ys)`) from Eq::sym(
+        assoc(op, unit, m, x, product(op, unit, rest), product(op, unit, ys))
+      )
+    }
+  }
+}
+
+pub theorem unit_unique<A>(
+  op: (A, A) -> A,
+  unit: A,
+  m: Monoid(A, op, unit),
+  other: A,
+  other_left: (a: A) -> alg!(`op, unit; other ⋆ a = a`)
+): other = unit {
+  calc other {
+    = alg!(`op, unit; other ⋆ ε`) from Eq::sym(right_unit(op, unit, m, other))
+    = unit from other_left(unit)
+  }
+}
+
+pub fn power<A>(op: (A, A) -> A, unit: A, a: A, n: Nat): A {
+  match n: A {
+    Zero => unit
+    Succ(k) => op(power(op, unit, a, k), a)
+  }
+}
+
+pub theorem power_add<A>(
+  op: (A, A) -> A,
+  unit: A,
+  m: Monoid(A, op, unit),
+  a: A,
+  n: Nat,
+  k: Nat
+): alg!(`op, unit; power(op, ε, a, ${n + k}) = power(op, ε, a, n) ⋆ power(op, ε, a, k)`) {
+  match k: alg!(
+    `op, unit; power(op, ε, a, ${n + k}) = power(op, ε, a, n) ⋆ power(op, ε, a, k)`
+  ) {
+    Zero => Eq::sym(right_unit(op, unit, m, power(op, unit, a, n)))
+    Succ(j) => calc alg!(`op, unit; power(op, ε, a, ${n + j}) ⋆ a`) {
+      = alg!(`op, unit; (power(op, ε, a, n) ⋆ power(op, ε, a, j)) ⋆ a`) from Eq::congr(
+        (v: A) => alg!(`op, unit; v ⋆ a`),
+        power_add(op, unit, m, a, n, j)
+      )
+      = alg!(`op, unit; power(op, ε, a, n) ⋆ (power(op, ε, a, j) ⋆ a)`) from assoc(
+        op,
+        unit,
+        m,
+        power(op, unit, a, n),
+        power(op, unit, a, j),
+        a
+      )
+    }
+  }
+}
+
+// A map preserving the operation and unit preserves every finite product.
+pub fn map_list<A, B>(f: (A) -> B, xs: List(A)): List(B) {
+  match xs: List(B) {
+    Nil => Nil
+    Cons(x, rest) => Cons(f(x), map_list(f, rest))
+  }
+}
+
+pub theorem map_product<A, B>(
+  op: (A, A) -> A,
+  unit: A,
+  target: (B, B) -> B,
+  target_unit: B,
+  f: (A) -> B,
+  preserves_unit: f(unit) = target_unit,
+  preserves_op: (
+    a: A,
+    b: A
+  ) -> f(alg!(`op, unit; a ⋆ b`)) = alg!(`target, target_unit; f(a) ⋆ f(b)`),
+  xs: List(A)
+): f(product(op, unit, xs)) = product(target, target_unit, map_list(f, xs)) {
+  match xs: f(product(op, unit, xs)) = product(target, target_unit, map_list(f, xs)) {
+    Nil => preserves_unit
+    Cons(x, rest) => Eq::trans(
+      preserves_op(x, product(op, unit, rest)),
+      Eq::congr(
+        (v: B) => alg!(`target, target_unit; f(x) ⋆ v`),
+        map_product(op, unit, target, target_unit, f, preserves_unit, preserves_op, rest)
+      )
+    )
+  }
+}
+
+pub theorem product_cons_congr<A>(
+  op: (A, A) -> A,
+  unit: A,
+  a: A,
+  b: A,
+  xs: List(A),
+  ys: List(A),
+  heads: a = b,
+  tails: alg!(`op, unit; product(op, ε, xs) = product(op, ε, ys)`)
+): alg!(`op, unit; product(op, ε, Cons(a, xs)) = product(op, ε, Cons(b, ys))`) {
+  congr2(op, a, b, product(op, unit, xs), product(op, unit, ys), heads, tails)
+}

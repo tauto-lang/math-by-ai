@@ -1,0 +1,53 @@
+import std::Base
+import std::Nat
+import "notation.taut"
+import "relations.taut"
+import core::notation
+import "divisibility.taut"
+import "euclid.taut"
+import "coprime.taut"
+
+pub(open) inductive Prime(p: Nat): Prop {
+  PrimeBy(
+    positive: nat!(`1 < p`),
+    divisors: (d: Nat, h: nat_rel!(`d | p`)) -> logic!(`d = 1 ∨ d = p`)
+  ): Prime(p)
+}
+pub theorem prime_gt_one(p: Nat, hp: Prime(p)): nat!(`1 < p`) {
+  match hp: nat!(`1 < p`) { PrimeBy(pos, all) => pos }
+}
+pub theorem prime_divisor(
+  p: Nat,
+  hp: Prime(p),
+  d: Nat,
+  h: nat_rel!(`d | p`)
+): logic!(`d = 1 ∨ d = p`) {
+  match hp: logic!(`d = 1 ∨ d = p`) { PrimeBy(pos, all) => all(d, h) }
+}
+pub theorem prime_coprime_or_divides(
+  p: Nat,
+  a: Nat,
+  hp: Prime(p)
+): logic!(`Coprime(p, a) ∨ Divides(p, a)`) {
+  Or::elim(
+    prime_divisor(p, hp, gcd(p, a), gcd_left(p, a, gcd(p, a), gcd_correct(p, a))),
+    (h: nat!(`gcd(p, a) = 1`)) => OrInl(h),
+    (h: nat!(`gcd(p, a) = p`)) => OrInr(
+      Eq::subst((d: Nat) => nat_rel!(`d | a`), h, gcd_right(p, a, gcd(p, a), gcd_correct(p, a)))
+    )
+  )
+}
+// Euclid's prime lemma, derived from computed Bezout coefficients.
+pub theorem prime_divides_product(
+  p: Nat,
+  a: Nat,
+  b: Nat,
+  hp: Prime(p),
+  h: nat_rel!(`p | a * b`)
+): logic!(`Divides(p, a) ∨ Divides(p, b)`) {
+  Or::elim(
+    prime_coprime_or_divides(p, a, hp),
+    (cop: Coprime(p, a)) => OrInr(coprime_cancel(p, a, b, cop, h)),
+    (pa: nat_rel!(`p | a`)) => OrInl(pa)
+  )
+}

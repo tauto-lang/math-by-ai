@@ -1,0 +1,62 @@
+import std::Base
+import "notation.taut"
+
+pub(open) inductive PartialOrder(A: Type, le: (A, A) -> Prop): Prop {
+  Mk(
+    reflexive: (a: A) -> logic!(`le(a, a)`),
+    transitive: (
+      a: A,
+      b: A,
+      c: A,
+      ab: logic!(`le(a, b)`),
+      bc: logic!(`le(b, c)`)
+    ) -> logic!(`le(a, c)`),
+    antisymmetric: (
+      a: A,
+      b: A,
+      ab: logic!(`le(a, b)`),
+      ba: logic!(`le(b, a)`)
+    ) -> logic!(`a = b`)
+  ): PartialOrder(A, le)
+}
+pub theorem order_refl<A>(le: (A, A) -> Prop, p: PartialOrder(A, le), a: A): logic!(`le(a, a)`) {
+  match p: logic!(`le(a, a)`) { Mk(r, t, s) => r(a) }
+}
+pub theorem order_trans<A>(
+  le: (A, A) -> Prop,
+  p: PartialOrder(A, le),
+  a: A,
+  b: A,
+  c: A,
+  ab: logic!(`le(a, b)`),
+  bc: logic!(`le(b, c)`)
+): logic!(`le(a, c)`) {
+  match p: logic!(`le(a, c)`) { Mk(r, t, s) => t(a, b, c, ab, bc) }
+}
+pub theorem order_antisym<A>(
+  le: (A, A) -> Prop,
+  p: PartialOrder(A, le),
+  a: A,
+  b: A,
+  ab: logic!(`le(a, b)`),
+  ba: logic!(`le(b, a)`)
+): logic!(`a = b`) {
+  match p: logic!(`a = b`) { Mk(r, t, s) => s(a, b, ab, ba) }
+}
+// Uniqueness needs only antisymmetry; neither set nor membership is decidable.
+pub fn IsLeast<A>(le: (A, A) -> Prop, member: (A) -> Prop, a: A): Prop {
+  (b: A, in_set: member(b)) -> logic!(`le(a, b)`)
+}
+pub theorem least_unique<A>(
+  le: (A, A) -> Prop,
+  p: PartialOrder(A, le),
+  member: (A) -> Prop,
+  a: A,
+  b: A,
+  ha: member(a),
+  hb: member(b),
+  la: IsLeast(le, member, a),
+  lb: IsLeast(le, member, b)
+): logic!(`a = b`) {
+  order_antisym(le, p, a, b, la(b, hb), lb(a, ha))
+}

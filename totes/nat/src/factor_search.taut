@@ -1,0 +1,218 @@
+import std::Base
+import std::Nat
+import std::NatDiv
+import std::NatNorm
+import std::IntLaws
+import "notation.taut"
+import "divisibility.taut"
+import "primality.taut"
+
+// Quotient projection used only after a nonzero factor has been established.
+pub fn quotient(n: Nat, d: Nat): Nat { Nat::dm_fst(Nat::divmod(n, d, 0, 0)) }
+pub(open) inductive FactorWitness(n: Nat, d: Nat): Prop {
+  Witness(
+    positive: nat!(`1 < d`),
+    proper: Nat::eq(d, n) = false,
+    product: nat!(`d * quotient(n, d) = n`)
+  ): FactorWitness(n, d)
+}
+pub theorem factor_product(n: Nat, d: Nat, h: FactorWitness(n, d)): nat!(`d * quotient(n, d) = n`) {
+  match h: nat!(`d * quotient(n, d) = n`) { Witness(pos, ne, eq) => eq }
+}
+pub theorem factor_positive(n: Nat, d: Nat, h: FactorWitness(n, d)): nat!(`1 < d`) {
+  match h: nat!(`1 < d`) { Witness(pos, ne, eq) => pos }
+}
+pub theorem factor_proper(n: Nat, d: Nat, h: FactorWitness(n, d)): Nat::eq(d, n) = false {
+  match h: Nat::eq(d, n) = false { Witness(pos, ne, eq) => ne }
+}
+theorem test_equal(
+  n: Nat,
+  k: Nat,
+  eq: Nat::eq(Succ(Succ(k)), n) = true
+): divisor_test(n, Succ(Succ(k))) = true {
+  Eq::congr(
+    (b: Bool) => Bool::or(
+      b,
+      bool_neg(Nat::eq(Nat::rem_nz(n, Succ(Succ(k)), Nat::succ_ne_zero(Succ(k))), 0))
+    ),
+    eq
+  )
+}
+theorem test_nonzero(
+  n: Nat,
+  k: Nat,
+  eq: Nat::eq(Succ(Succ(k)), n) = false,
+  rem: Nat::eq(Nat::rem_nz(n, Succ(Succ(k)), Nat::succ_ne_zero(Succ(k))), 0) = false
+): divisor_test(n, Succ(Succ(k))) = true {
+  Eq::trans(
+    Eq::congr(
+      (b: Bool) => Bool::or(
+        b,
+        bool_neg(Nat::eq(Nat::rem_nz(n, Succ(Succ(k)), Nat::succ_ne_zero(Succ(k))), 0))
+      ),
+      eq
+    ),
+    Eq::congr(bool_neg, rem)
+  )
+}
+pub theorem bad_test_factor(n: Nat, d: Nat, bad: divisor_test(n, d) = false): FactorWitness(n, d) {
+  match d: FactorWitness(n, d) {
+    Zero => False::elim(true_ne_false(bad))
+    Succ(k) => match k: FactorWitness(n, Succ(k)) {
+      Zero => False::elim(true_ne_false(bad))
+      Succ(j) => Or::elim(
+        boolean_cases(Nat::eq(Succ(Succ(j)), n)),
+        (ne: Nat::eq(Succ(Succ(j)), n) = false) => Or::elim(
+          boolean_cases(Nat::eq(Nat::rem_nz(n, Succ(Succ(j)), Nat::succ_ne_zero(Succ(j))), 0)),
+          (nonzero: Nat::eq(Nat::rem_nz(n, Succ(Succ(j)), Nat::succ_ne_zero(Succ(j))), 0) = false) => False::elim(
+            true_ne_false(Eq::trans(Eq::sym(test_nonzero(n, j, ne, nonzero)), bad))
+          ),
+          (zero: Nat::eq(Nat::rem_nz(n, Succ(Succ(j)), Nat::succ_ne_zero(Succ(j))), 0) = true) => Witness(
+            Refl,
+            ne,
+            Eq::sym(Nat::mul_div_of_mod_zero(n, Succ(Succ(j)), Nat::succ_ne_zero(Succ(j)), zero))
+          )
+        ),
+        (eq: Nat::eq(Succ(Succ(j)), n) = true) => False::elim(
+          true_ne_false(Eq::trans(Eq::sym(test_equal(n, j, eq)), bad))
+        )
+      )
+    }
+  }
+}
+theorem trial_false(n: Nat, pos: nat!(`1 < n`), bad: is_prime(n) = false): trial(n, n) = false {
+  Eq::trans(Eq::sym(Eq::congr((b: Bool) => Bool::and(b, trial(n, n)), pos)), bad)
+}
+pub theorem searched_factor(
+  n: Nat,
+  pos: nat!(`1 < n`),
+  bad: is_prime(n) = false
+): FactorWitness(n, find_factor(n, n)) {
+  bad_test_factor(
+    n,
+    find_factor(n, n),
+    candidate_bad(n, n, find_factor(n, n), find_factor_correct(n, n, trial_false(n, pos, bad)))
+  )
+}
+
+theorem quotient_positive_of(
+  n: Nat,
+  d: Nat,
+  q: Nat,
+  pos: nat!(`1 < n`),
+  product: nat!(`d * q = n`),
+  proper: Nat::eq(d, n) = false
+): nat!(`1 < q`) {
+  match q: nat!(`1 < q`) {
+    Zero => False::elim(
+      false_ne_true(
+        Eq::trans(
+          Eq::congr((x: Nat) => Nat::lt(1, x), Eq::trans(Eq::sym(Nat::mul_zero_right(d)), product)),
+          pos
+        )
+      )
+    )
+    Succ(k) => match k: nat!(`1 < Succ(k)`) {
+      Zero => False::elim(
+        true_ne_false(
+          Eq::trans(
+            Eq::sym(Nat::eq_refl(d)),
+            Eq::trans(
+              Eq::sym(
+                Eq::congr(
+                  (x: Nat) => Nat::eq(d, x),
+                  Eq::trans(Eq::sym(product), Nat::mul_one_right(d))
+                )
+              ),
+              proper
+            )
+          )
+        )
+      )
+      Succ(j) => Refl
+    }
+  }
+}
+pub theorem factor_quotient_positive(
+  n: Nat,
+  d: Nat,
+  pos: nat!(`1 < n`),
+  h: FactorWitness(n, d)
+): nat!(`1 < quotient(n, d)`) {
+  quotient_positive_of(n, d, quotient(n, d), pos, factor_product(n, d, h), factor_proper(n, d, h))
+}
+theorem add_positive(a: Nat, b: Nat, h: nat!(`0 < b`)): nat!(`a < a + b`) {
+  match a: nat!(`a < a + b`) {
+    Zero => Eq::trans(Eq::congr((x: Nat) => Nat::lt(0, x), Nat::add_zero_left(b)), h)
+    Succ(k) => Eq::trans(
+      Eq::congr((x: Nat) => Nat::lt(Succ(k), x), Nat::add_succ_left(k, b)),
+      add_positive(k, b, h)
+    )
+  }
+}
+theorem mul_positive(a: Nat, b: Nat): nat!(`0 < Succ(a) * Succ(b)`) {
+  Eq::congr((x: Nat) => Nat::lt(0, x), Nat::mul_succ_left(a, Succ(b)))
+}
+theorem pair_smaller(a: Nat, b: Nat): nat!(`Succ(a) < Succ(a) * Succ(Succ(b))`) {
+  Eq::trans(
+    Eq::congr((x: Nat) => Nat::lt(Succ(a), x), Nat::mul_succ_right(Succ(a), Succ(b))),
+    Eq::trans(
+      Eq::congr((x: Nat) => Nat::lt(Succ(a), x), Nat::add_comm(nat!(`Succ(a) * Succ(b)`), Succ(a))),
+      add_positive(Succ(a), nat!(`Succ(a) * Succ(b)`), mul_positive(a, b))
+    )
+  )
+}
+theorem quotient_smaller_of(
+  n: Nat,
+  d: Nat,
+  q: Nat,
+  hd: nat!(`1 < d`),
+  hq: nat!(`1 < q`),
+  product: nat!(`d * q = n`)
+): nat!(`q < n`) {
+  match d: nat!(`q < n`) {
+    Zero => False::elim(false_ne_true(hd))
+    Succ(k) => match k: nat!(`q < n`) {
+      Zero => False::elim(false_ne_true(hd))
+      Succ(j) => match q: nat!(`q < n`) {
+        Zero => False::elim(false_ne_true(hq))
+        Succ(i) => Eq::subst(
+          (x: Nat) => nat!(`Succ(i) < x`),
+          product,
+          Eq::subst(
+            (x: Nat) => nat!(`Succ(i) < x`),
+            Nat::mul_comm(Succ(i), Succ(Succ(j))),
+            pair_smaller(i, j)
+          )
+        )
+      }
+    }
+  }
+}
+pub theorem factor_quotient_smaller(
+  n: Nat,
+  d: Nat,
+  pos: nat!(`1 < n`),
+  h: FactorWitness(n, d)
+): nat!(`quotient(n, d) < n`) {
+  quotient_smaller_of(
+    n,
+    d,
+    quotient(n, d),
+    factor_positive(n, d, h),
+    factor_quotient_positive(n, d, pos, h),
+    factor_product(n, d, h)
+  )
+}
+pub theorem searched_smaller(
+  n: Nat,
+  pos: nat!(`1 < n`),
+  bad: is_prime(n) = false
+): nat!(`find_factor(n, n) < n`) {
+  Nat::lt_succ_ne(
+    find_factor(n, n),
+    n,
+    candidate_bound(n, n, find_factor(n, n), find_factor_correct(n, n, trial_false(n, pos, bad))),
+    factor_proper(n, find_factor(n, n), searched_factor(n, pos, bad))
+  )
+}

@@ -1,0 +1,63 @@
+import std::prelude::Os
+import std::prelude::Shared
+import std::prelude::Macro
+import core::notation
+import algebra::notation
+import algebra::semiring_notation
+import nat::notation
+import nat::integer_notation
+import nat::relations
+
+// These are byte offsets, including the two-byte alpha and three-byte ≤.
+fn same(xs: List(SynHighlight), ys: List(SynHighlight)): Bool ! {Div} {
+  match xs {
+    Nil => match ys { Nil => true
+      _ => false }
+    Cons(x, rest) => match ys { Nil => false
+      Cons(y, more) => x.start == y.start && x.end == y.end && x.kind == y.kind && same(rest, more) }
+  }
+}
+fn check(
+  label: Text,
+  actual: List(SynHighlight),
+  expected: List(SynHighlight)
+): Unit ! {stop, Div} {
+  if same(actual, expected) { () } else { perform stop(concat("wrong highlights: ", label)) }
+}
+let tokens := [
+  SynTok { kind: "Name", text: "f", start: 0, end: 1, skipped: false },
+  SynTok { kind: "Whitespace", text: " ", start: 1, end: 2, skipped: true },
+  SynTok { kind: "LParen", text: "(", start: 2, end: 3, skipped: false },
+  SynTok { kind: "Name", text: "α", start: 3, end: 5, skipped: false },
+  SynTok { kind: "RParen", text: ")", start: 5, end: 6, skipped: false },
+  SynTok { kind: "Plus", text: "+", start: 7, end: 8, skipped: false },
+  SynTok { kind: "Num", text: "2", start: 9, end: 10, skipped: false },
+  SynTok { kind: "Below", text: "≤", start: 11, end: 14, skipped: false },
+  SynTok { kind: "TautoExpr", text: "$foo", start: 15, end: 19, skipped: false }
+]
+let expected := [
+  SynHighlight { start: 0, end: 1, kind: "function" },
+  SynHighlight { start: 2, end: 3, kind: "operator" },
+  SynHighlight { start: 3, end: 5, kind: "variable" },
+  SynHighlight { start: 5, end: 6, kind: "operator" },
+  SynHighlight { start: 7, end: 8, kind: "operator" },
+  SynHighlight { start: 9, end: 10, kind: "number" },
+  SynHighlight { start: 11, end: 14, kind: "operator" }
+]
+check("logic", logic_tokens(tokens), expected)
+check("monoid", algebra_tokens(tokens), expected)
+check("semiring", semiring_tokens(tokens), expected)
+check("natural", nat_tokens(tokens), expected)
+check("integer", int_tokens(tokens), expected)
+check("relations", relation_tokens(tokens), expected)
+check(
+  "unit",
+  algebra_tokens([SynTok { kind: "Name", text: "ε", start: 0, end: 2, skipped: false }]),
+  [SynHighlight { start: 0, end: 2, kind: "enumMember" }]
+)
+check(
+  "signed difference",
+  int_tokens([SynTok { kind: "Diff", text: "diff", start: 0, end: 4, skipped: false }]),
+  [SynHighlight { start: 0, end: 4, kind: "function" }]
+)
+print("ok: six syntax token callbacks and UTF-8 spans\n")

@@ -1,0 +1,9 @@
+package {
+  name = "nat"
+  version = "0.1.0"
+}
+
+dependencies {
+  core { path = "../core" }
+  algebra { path = "../algebra" }
+}

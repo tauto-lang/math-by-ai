@@ -1,0 +1,101 @@
+import std::Base
+import std::prelude::Macro
+import core::highlight
+
+pub fn algebra_tokens(ts: List(SynTok)): List(SynHighlight) ! {Div} { math_tokens(ts) }
+
+syntax!(monoid_notation, ```par
+%start Expr
+%title "monoid expressions"
+%%
+Expr: Header Comma Header Semi Formula;
+Header: Name | Num | Embed;
+Formula: Product [ Equals Product ];
+Product: Atom { Star Atom };
+Atom: Num | Identity | Reference | Paren | Embed;
+Reference: Name [ Arguments ];
+Arguments: LParen Product { Comma Product } RParen;
+Paren: LParen Product RParen;
+Embed: TautoExpr;
+Name: /[_\p{L}][_\p{L}\p{N}']*(::[_\p{L}][_\p{L}\p{N}']*)*/;
+Num: /[0-9]+/;
+Identity: 'ε';
+Star: '⋆';
+Comma: ',';
+Semi: ';';
+Equals: '=';
+LParen: '(';
+RParen: ')';
+```, with(tokens: algebra_tokens)) => struct Expr, enum Header, struct Formula, struct Formula_Opt1, struct Product, struct Product_Rep1, enum Atom, struct Reference, struct Arguments, struct Arguments_Rep1, struct Paren, fn parse
+
+pub fn algebra_name(t: SynToken): SynExpr {
+  ExVar(SynIdent { name: t.text, ctx: t.ctx, span: t.span })
+}
+
+pub fn algebra_header(a: monoid_notation::Header): SynExpr {
+  match a {
+    Name(t) => algebra_name(t)
+    Num(t) => ExNat(t.text, t.span)
+    Embed(e) => e
+  }
+}
+pub fn algebra_atom(
+  a: monoid_notation::Atom,
+  op: SynExpr,
+  unit: SynExpr
+): SynExpr ! {macro_error, Div} {
+  match a {
+    Num(t) => ExNat(t.text, t.span)
+    Identity(t) => unit
+    Embed(e) => e
+    Paren(p) => algebra_product(p.product, op, unit)
+    Reference(r) => match r.arguments {
+      None => if r.name.text == "ε" { unit } else { algebra_name(r.name) }
+      Some(args) => ExApp(
+        algebra_name(r.name),
+        Cons(algebra_product(args.product, op, unit), algebra_args(args.rep, op, unit)),
+        r.span
+      )
+    }
+  }
+}
+pub fn algebra_args(
+  xs: List(monoid_notation::Arguments_Rep1),
+  op: SynExpr,
+  unit: SynExpr
+): List(SynExpr) ! {macro_error, Div} {
+  match xs { Nil => Nil
+    Cons(x, rest) => Cons(algebra_product(x.product, op, unit), algebra_args(rest, op, unit)) }
+}
+pub fn algebra_rest(
+  acc: SynExpr,
+  xs: List(monoid_notation::Product_Rep1),
+  op: SynExpr,
+  unit: SynExpr
+): SynExpr ! {macro_error, Div} {
+  match xs { Nil => acc
+    Cons(x, rest) => { let b := algebra_atom(x.atom, op, unit)
+      algebra_rest(quote { $op($acc, $b) }, rest, op, unit) }
+  }
+}
+pub fn algebra_product(
+  p: monoid_notation::Product,
+  op: SynExpr,
+  unit: SynExpr
+): SynExpr ! {macro_error, Div} {
+  algebra_rest(algebra_atom(p.atom, op, unit), p.rep, op, unit)
+}
+pub fn algebra_expression(e: monoid_notation::Expr): SynExpr ! {macro_error, Div} {
+  let op := algebra_header(e.header)
+  let unit := algebra_header(e.header_2)
+  let left := algebra_product(e.formula.product, op, unit)
+  match e.formula.opt {
+    None => left
+    Some(r) => { let right := algebra_product(r.product, op, unit)
+      quote { $left = $right } }
+  }
+}
+pub macro fn alg(e: monoid_notation::Expr): SynExpr ! {macro_error, Div} { algebra_expression(e) }
+pub macro fn monoid_eq(
+  e: monoid_notation::Expr
+): SynExpr ! {macro_error, Div} { algebra_expression(e) }

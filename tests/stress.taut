@@ -1,0 +1,16 @@
+import std::Base
+import core::notation
+import nat::notation
+import nat::euclid
+import nat::primes
+import nat::primality
+import nat::factorization
+
+// Optional concrete normalization workload; not a performance guarantee.
+// From this directory: tauto check tests/stress.taut --fresh --summary --timeout 30
+
+theorem prime_100003(): Prime(100003) { is_prime_sound(100003, Refl) }
+theorem gcd_1071_462(): nat!(`gcd(1071, 462) = 21`) { Refl }
+theorem factorize_360(): logic!(
+  `factorize(360) = Cons(5, Cons(3, Cons(3, Cons(2, Cons(2, Cons(2, Nil))))))`
+) { Refl }

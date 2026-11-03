@@ -1,0 +1,166 @@
+import std::Base
+import std::Nat
+import nat::notation
+import core::notation
+import algebra::monoid
+import algebra::commutative
+import algebra::group
+import algebra::semiring
+import algebra::notation
+import core::order
+import nat::arithmetic
+import nat::divisibility
+import nat::order
+import nat::relations
+import nat::number_theory
+
+// A concrete group: Boolean addition modulo two, inverse = identity.
+fn xor(a: Bool, b: Bool): Bool {
+  match a: Bool {
+    false => b
+    true => match b: Bool { false => true
+      true => false }
+  }
+}
+theorem xor_assoc(a: Bool, b: Bool, c: Bool): alg!(`xor, false; a ⋆ b ⋆ c = a ⋆ (b ⋆ c)`) {
+  match a: alg!(`xor, false; a ⋆ b ⋆ c = a ⋆ (b ⋆ c)`) {
+    false => Refl
+    true => match b: alg!(`xor, false; true ⋆ b ⋆ c = true ⋆ (b ⋆ c)`) {
+      false => Refl
+      true => match c: alg!(`xor, false; true ⋆ true ⋆ c = true ⋆ (true ⋆ c)`) {
+        false => Refl
+        true => Refl
+      }
+    }
+  }
+}
+theorem xor_right_unit(a: Bool): alg!(`xor, false; a ⋆ false = a`) {
+  match a: alg!(`xor, false; a ⋆ false = a`) { false => Refl
+    true => Refl }
+}
+theorem xor_inverse(a: Bool): alg!(`xor, false; a ⋆ a = false`) {
+  match a: alg!(`xor, false; a ⋆ a = false`) { false => Refl
+    true => Refl }
+}
+theorem boolean_group(): Group(Bool, xor, false, (a: Bool) => a) {
+  Group::Mk(
+    Monoid::Mk(
+      (a: Bool, b: Bool, c: Bool) => xor_assoc(a, b, c),
+      (a: Bool) => Refl,
+      (a: Bool) => xor_right_unit(a)
+    ),
+    (a: Bool) => xor_inverse(a),
+    (a: Bool) => xor_inverse(a)
+  )
+}
+theorem xor_cancel(a: Bool, b: Bool, c: Bool, h: alg!(`xor, false; a ⋆ b = a ⋆ c`)): b = c {
+  cancel_left(xor, false, (a: Bool) => a, boolean_group(), a, b, c, h)
+}
+// Exercise the order reversal in the generic, noncommutative inverse theorem.
+theorem reverse_inverse<A>(
+  op: (A, A) -> A,
+  unit: A,
+  inv: (A) -> A,
+  g: Group(A, op, unit, inv),
+  a: A,
+  b: A
+): alg!(`op, unit; inv(a ⋆ b) = inv(b) ⋆ inv(a)`) {
+  inverse_product(op, unit, inv, g, a, b)
+}
+theorem inverse_twice<A>(
+  op: (A, A) -> A,
+  unit: A,
+  inv: (A) -> A,
+  g: Group(A, op, unit, inv),
+  a: A
+): logic!(`inv(inv(a)) = a`) {
+  inverse_involution(op, unit, inv, g, a)
+}
+
+// Swapping arbitrary adjacent inputs preserves both sum and product.
+theorem swap_sum(
+  a: Nat,
+  b: Nat,
+  xs: List(Nat)
+): nat!(`sum(Cons(a, Cons(b, xs))) = sum(Cons(b, Cons(a, xs)))`) {
+  sum_permutation(Cons(a, Cons(b, xs)), Cons(b, Cons(a, xs)), Swap(a, b, xs))
+}
+theorem swap_product(
+  a: Nat,
+  b: Nat,
+  xs: List(Nat)
+): nat!(`prod(Cons(a, Cons(b, xs))) = prod(Cons(b, Cons(a, xs)))`) {
+  prod_permutation(Cons(a, Cons(b, xs)), Cons(b, Cons(a, xs)), Swap(a, b, xs))
+}
+theorem multiplicative_power(
+  a: Nat,
+  b: Nat,
+  n: Nat
+): nat!(`power(Nat::mul, 1, a * b, n) = power(Nat::mul, 1, a, n) * power(Nat::mul, 1, b, n)`) {
+  power_product(Nat::mul, 1, multiplicative_comm_monoid(), a, b, n)
+}
+theorem distribute_finite_sum(
+  a: Nat,
+  xs: List(Nat)
+): nat!(`a * sum(xs)`) = sum(map_list((x: Nat) => nat!(`a * x`), xs)) {
+  scale_sum(a, xs)
+}
+theorem four_term_expansion(a: Nat, b: Nat, c: Nat, d: Nat): nat!(
+  `(a + b) * (c + d) = a * c + a * d + (b * c + b * d)`
+) {
+  expand_product(Nat::add, 0, Nat::mul, 1, natural_semiring(), a, b, c, d)
+}
+
+theorem common_divisor_of_sum(
+  a: Nat,
+  b: Nat,
+  c: Nat,
+  h: nat_rel!(`a | b`),
+  k: nat_rel!(`a | c`)
+): nat_rel!(`a | b + c`) { divides_add(a, b, c, h, k) }
+theorem six_divides_forty_two(): nat_rel!(`6 | 42`) { By(7, Refl) }
+theorem divisor_chain(
+  a: Nat,
+  b: Nat,
+  c: Nat,
+  h: nat_rel!(`a | b`),
+  k: nat_rel!(`b | c`)
+): nat_rel!(`a | c`) { divides_trans(a, b, c, h, k) }
+theorem only_zero(b: Nat, h: nat_rel!(`0 | b`)): nat!(`b = 0`) { zero_divides_only_zero(b, h) }
+theorem order_cycle(a: Nat, b: Nat, h: nat!(`a ≤ b`), k: nat!(`b ≤ a`)): nat!(`a = b`) {
+  order_antisym(nat_below, natural_order(), a, b, h, k)
+}
+
+theorem divisibility_notation(): nat_rel!(`6 | 42`) { By(7, Refl) }
+theorem order_notation(): nat_rel!(`2 ≤ 5`) { Refl }
+theorem embedded_relation(a: Nat): nat_rel!(`$a ≤ ${Succ(a)}`) { below_successor(a) }
+
+theorem finite_common_divisor(a: Nat, xs: List(Nat), h: AllDivisible(a, xs)): nat_rel!(`a | sum(xs)`) {
+  divides_sum(a, xs, h)
+}
+theorem powers_are_multiples(a: Nat, n: Nat): nat_rel!(`a | power(Nat::mul, 1, a, Succ(n))`) {
+  divides_positive_power(a, n)
+}
+theorem linear_combination(
+  a: Nat,
+  b: Nat,
+  c: Nat,
+  x: Nat,
+  y: Nat,
+  ab: nat_rel!(`a | b`),
+  ac: nat_rel!(`a | c`)
+): nat_rel!(`a | b * x + c * y`) {
+  divides_linear_combination(a, b, c, x, y, ab, ac)
+}
+theorem unique_group_solution<A>(
+  op: (A, A) -> A,
+  unit: A,
+  inv: (A) -> A,
+  g: Group(A, op, unit, inv),
+  a: A,
+  b: A,
+  x: A,
+  h: alg!(`op, unit; a ⋆ x = b`)
+): alg!(`op, unit; x = inv(a) ⋆ b`) {
+  solution_unique(op, unit, inv, g, a, b, x, h)
+}

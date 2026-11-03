@@ -1,0 +1,77 @@
+import std::Base
+import std::Nat
+import core::equality
+import algebra::monoid
+import algebra::notation
+import nat::arithmetic
+import nat::notation
+
+// Precedence, left association, parentheses, and caller expressions.
+theorem precedence(): nat_eq!(`2 + 3 * 4 = 14`) { Refl }
+theorem parentheses(): nat_eq!(`(2 + 3) * 4 = 20`) { Refl }
+theorem left_association(): nat_eq!(`2 * 3 * 4 + 5 + 6 = 35`) { Refl }
+theorem embedded(n: Nat): nat_eq!(`$n + 0 = ${Nat::add(n, 0)}`) { Refl }
+theorem addition_commutes(a: Nat, b: Nat): nat_eq!(`$a + $b = $b + $a`) {
+  Nat::add_comm(a, b)
+}
+
+// Both notations coexist. The operation and identity belong to this use.
+theorem additive_unit(n: Nat): monoid_eq!(`${Nat::add}, ${0}; $n ⋆ ε = $n`) {
+  right_unit(Nat::add, 0, additive_monoid(), n)
+}
+theorem multiplicative_unit(n: Nat): monoid_eq!(`${Nat::mul}, ${1}; ε ⋆ $n = $n`) {
+  left_unit(Nat::mul, 1, multiplicative_monoid(), n)
+}
+theorem generic_associativity<A>(
+  op: (A, A) -> A,
+  unit: A,
+  m: Monoid(A, op, unit),
+  a: A,
+  b: A,
+  c: A
+): monoid_eq!(`$op, $unit; ($a ⋆ $b) ⋆ $c = $a ⋆ ($b ⋆ $c)`) {
+  assoc(op, unit, m, a, b, c)
+}
+
+theorem empty_sum(): nat!(`sum(Nil) = 0`) { Refl }
+theorem empty_product(): nat!(`prod(Nil) = 1`) { Refl }
+theorem concrete_sum(): nat!(`sum(Cons(2, Cons(3, Cons(4, Nil)))) = 9`) { Refl }
+theorem concrete_product(): nat!(`prod(Cons(2, Cons(3, Cons(4, Nil)))) = 24`) { Refl }
+theorem split_sum(
+  xs: List(Nat),
+  ys: List(Nat)
+): nat!(`sum(List::append(xs, ys)) = sum(xs) + sum(ys)`) { sum_append(xs, ys) }
+theorem split_product(
+  xs: List(Nat),
+  ys: List(Nat)
+): nat!(`prod(List::append(xs, ys)) = prod(xs) * prod(ys)`) { prod_append(xs, ys) }
+theorem powers(
+  n: Nat,
+  k: Nat
+): nat!(`power(Nat::mul, 1, 2, n + k) = power(Nat::mul, 1, 2, n) * power(Nat::mul, 1, 2, k)`) {
+  power_add(Nat::mul, 1, multiplicative_monoid(), 2, n, k)
+}
+
+// Call-site names cannot capture the names introduced by macro expansion.
+theorem caller_names(
+  nat_sum: Nat,
+  nat_product: Nat
+): nat_eq!(`$nat_sum + $nat_product = $nat_product + $nat_sum`) {
+  Nat::add_comm(nat_sum, nat_product)
+}
+theorem binary_congruence(
+  a: Nat,
+  b: Nat,
+  c: Nat,
+  d: Nat,
+  h: a = b,
+  k: c = d
+): nat!(`a + c = b + d`) {
+  congr2(Nat::add, a, b, c, d, h, k)
+}
+theorem unit_is_unique(other: Nat, h: (a: Nat) -> nat!(`other + a = a`)): nat!(`other = 0`) {
+  unit_unique(Nat::add, 0, additive_monoid(), other, h)
+}
+theorem map_identity(xs: List(Nat)): nat!(`sum(xs) = sum(${map_list((n: Nat) => n, xs)})`) {
+  map_product(Nat::add, 0, Nat::add, 0, (n: Nat) => n, Refl, (a: Nat, b: Nat) => Refl, xs)
+}

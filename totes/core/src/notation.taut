@@ -1,0 +1,97 @@
+import std::Base
+import std::prelude::Macro
+import "highlight.taut"
+
+pub fn logic_tokens(ts: List(SynTok)): List(SynHighlight) ! {Div} { math_tokens(ts) }
+syntax!(logic_notation, ```par
+%start Expr
+%title "logic and equality"
+%%
+Expr: Disjunction [ Arrow Expr ];
+Disjunction: Conjunction { Or Conjunction };
+Conjunction: Comparison { And Comparison };
+Comparison: Atom [ Equals Atom ];
+Atom: Num | Reference | Paren | Embed | Negation;
+Num: /[0-9]+/;
+Negation: Not Atom;
+Reference: Name [ Arguments ];
+Arguments: LParen Expr { Comma Expr } RParen;
+Paren: LParen Expr RParen;
+Embed: TautoExpr;
+Name: /[_\p{L}][_\p{L}\p{N}']*(::[_\p{L}][_\p{L}\p{N}']*)*/;
+Arrow: '→';
+Or: '∨';
+And: '∧';
+Not: '¬';
+Equals: '=';
+Comma: ',';
+LParen: '(';
+RParen: ')';
+```, with(tokens: logic_tokens)) => struct Expr, struct Expr_Opt1,
+  struct Disjunction, struct Disjunction_Rep1, struct Conjunction, struct Conjunction_Rep1,
+  struct Comparison, struct Comparison_Opt1, enum Atom, struct Reference,
+  struct Arguments, struct Arguments_Rep1, struct Paren, struct Negation, fn parse
+
+pub fn logic_name(t: SynToken): SynExpr {
+  ExVar(SynIdent { name: t.text, ctx: t.ctx, span: t.span })
+}
+pub fn logic_args(xs: List(logic_notation::Arguments_Rep1)): List(SynExpr) ! {macro_error, Div} {
+  match xs { Nil => Nil
+    Cons(x, rest) => Cons(logic_expr(x.expr), logic_args(rest)) }
+}
+pub fn logic_atom(a: logic_notation::Atom): SynExpr ! {macro_error, Div} {
+  match a {
+    Num(t) => ExNat(t.text, t.span)
+    Embed(e) => e
+    Paren(p) => logic_expr(p.expr)
+    Negation(n) => { let p := logic_atom(n.atom)
+      quote { ¬($p) } }
+    Reference(r) => match r.arguments {
+      None => logic_name(r.name)
+      Some(args) => ExApp(
+        logic_name(r.name),
+        Cons(logic_expr(args.expr), logic_args(args.rep)),
+        r.span
+      )
+    }
+  }
+}
+pub fn logic_comparison(c: logic_notation::Comparison): SynExpr ! {macro_error, Div} {
+  let a := logic_atom(c.atom)
+  match c.opt { None => a
+    Some(r) => { let b := logic_atom(r.atom)
+      quote { $a = $b } }
+  }
+}
+pub fn logic_ands(
+  acc: SynExpr,
+  xs: List(logic_notation::Conjunction_Rep1)
+): SynExpr ! {macro_error, Div} {
+  match xs { Nil => acc
+    Cons(x, rest) => { let b := logic_comparison(x.comparison)
+      logic_ands(quote { And($acc, $b) }, rest) }
+  }
+}
+pub fn logic_conjunction(c: logic_notation::Conjunction): SynExpr ! {macro_error, Div} {
+  logic_ands(logic_comparison(c.comparison), c.rep)
+}
+pub fn logic_ors(
+  acc: SynExpr,
+  xs: List(logic_notation::Disjunction_Rep1)
+): SynExpr ! {macro_error, Div} {
+  match xs { Nil => acc
+    Cons(x, rest) => { let b := logic_conjunction(x.conjunction)
+      logic_ors(quote { Or($acc, $b) }, rest) }
+  }
+}
+pub fn logic_disjunction(d: logic_notation::Disjunction): SynExpr ! {macro_error, Div} {
+  logic_ors(logic_conjunction(d.conjunction), d.rep)
+}
+pub fn logic_expr(e: logic_notation::Expr): SynExpr ! {macro_error, Div} {
+  let a := logic_disjunction(e.disjunction)
+  match e.opt { None => a
+    Some(r) => { let b := logic_expr(r.expr)
+      quote { ($a) -> $b } }
+  }
+}
+pub macro fn logic(e: logic_notation::Expr): SynExpr ! {macro_error, Div} { logic_expr(e) }

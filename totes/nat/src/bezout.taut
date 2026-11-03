@@ -1,0 +1,222 @@
+import std::Base
+import std::Nat
+import std::NatDiv
+import std::NatNorm
+import std::Tactic
+import std::Int
+import std::IntLaws
+import "notation.taut"
+import "integer_notation.taut"
+import "euclid.taut"
+
+// Coefficients are signed pairs: (pa - na), (pb - nb).
+// All arithmetic inside the extended algorithm is exact natural arithmetic.
+pub(open) inductive Coefficients: Type {
+  Coeff(pa: Nat, na: Nat, pb: Nat, nb: Nat): Coefficients
+}
+pub fn balance(a: Nat, b: Nat, g: Nat, c: Coefficients): Prop {
+  match c: Prop {
+    Coeff(pa, na, pb, nb) => nat!(`g + (a * na + b * nb) = a * pa + b * pb`)
+  }
+}
+pub fn lift_coeff(q: Nat, c: Coefficients): Coefficients {
+  match c: Coefficients {
+    Coeff(pa, na, pb, nb) => Coeff(pb, nb, nat!(`pa + q * nb`), nat!(`na + q * pb`))
+  }
+}
+
+theorem lift_normalize_0(
+  b: Nat,
+  r: Nat,
+  q: Nat,
+  g: Nat,
+  pa: Nat,
+  na: Nat,
+  pb: Nat,
+  nb: Nat
+): nat!(
+  `g + ((b * q + r) * nb + b * (na + q * pb)) = g + (b * na + r * nb) + (b * q * nb + b * q * pb)`
+) {
+  by nat_norm!(): nat!(
+    `g + ((b * q + r) * nb + b * (na + q * pb)) = g + (b * na + r * nb) + (b * q * nb + b * q * pb)`
+  ) {}
+}
+theorem lift_normalize_1(
+  b: Nat,
+  r: Nat,
+  q: Nat,
+  g: Nat,
+  pa: Nat,
+  na: Nat,
+  pb: Nat,
+  nb: Nat
+): nat!(`b * pa + r * pb + (b * q * nb + b * q * pb) = (b * q + r) * pb + b * (pa + q * nb)`) {
+  by nat_norm!(): nat!(
+    `b * pa + r * pb + (b * q * nb + b * q * pb) = (b * q + r) * pb + b * (pa + q * nb)`
+  ) {}
+}
+pub theorem lift_balance(
+  b: Nat,
+  r: Nat,
+  q: Nat,
+  g: Nat,
+  c: Coefficients,
+  h: balance(b, r, g, c)
+): balance(nat!(`b * q + r`), b, g, lift_coeff(q, c)) {
+  match c: balance(nat!(`b * q + r`), b, g, lift_coeff(q, c)) {
+    Coeff(pa, na, pb, nb) => calc nat!(`g + ((b * q + r) * nb + b * (na + q * pb))`) {
+      = nat!(`g + (b * na + r * nb) + (b * q * nb + b * q * pb)`) from lift_normalize_0(
+        b,
+        r,
+        q,
+        g,
+        pa,
+        na,
+        pb,
+        nb
+      )
+      = nat!(`b * pa + r * pb + (b * q * nb + b * q * pb)`) from Eq::congr(
+        (x: Nat) => nat!(`x + (b * q * nb + b * q * pb)`),
+        h
+      )
+      = nat!(`(b * q + r) * pb + b * (pa + q * nb)`) from lift_normalize_1(
+        b,
+        r,
+        q,
+        g,
+        pa,
+        na,
+        pb,
+        nb
+      )
+    }
+  }
+}
+
+fn coefficient_loop(steps: Nat, a: Nat, b: Nat): Coefficients decreasing_by steps {
+  match b: Coefficients {
+    Zero => Coeff(1, 0, 0, 0)
+    Succ(k) => match steps: Coefficients {
+      Zero => Coeff(1, 0, 0, 0)
+      Succ(f) => lift_coeff(
+        Nat::div_nz(a, Succ(k), Nat::succ_ne_zero(k)),
+        coefficient_loop(f, Succ(k), Nat::rem_nz(a, Succ(k), Nat::succ_ne_zero(k)))
+      )
+    }
+  }
+}
+pub fn bezout_coefficients(a: Nat, b: Nat): Coefficients { coefficient_loop(b, a, b) }
+
+theorem base_balance(a: Nat): balance(a, 0, a, Coeff(1, 0, 0, 0)) {
+  by nat_norm!(): nat!(`a + (a * 0 + 0 * 0) = a * 1 + 0 * 0`) {}
+}
+theorem coefficient_correct(
+  steps: Nat,
+  a: Nat,
+  b: Nat,
+  bound: nat!(`b ≤ steps`)
+): balance(a, b, euclid_loop(steps, a, b), coefficient_loop(steps, a, b)) {
+  match steps: balance(a, b, euclid_loop(steps, a, b), coefficient_loop(steps, a, b)) {
+    Zero => match b: balance(a, b, euclid_loop(Zero, a, b), coefficient_loop(Zero, a, b)) {
+      Zero => base_balance(a)
+      Succ(k) => False::elim(false_ne_true(Eq::trans(Eq::sym(Nat::lt_zero_false(k)), bound)))
+    }
+    Succ(f) => match b: balance(a, b, euclid_loop(Succ(f), a, b), coefficient_loop(Succ(f), a, b)) {
+      Zero => base_balance(a)
+      Succ(k) => Eq::subst(
+        (x: Nat) => balance(
+          x,
+          Succ(k),
+          euclid_loop(f, Succ(k), Nat::rem_nz(a, Succ(k), Nat::succ_ne_zero(k))),
+          coefficient_loop(Succ(f), a, Succ(k))
+        ),
+        Nat::div_mod_eq(a, Succ(k), Nat::succ_ne_zero(k)),
+        lift_balance(
+          Succ(k),
+          Nat::rem_nz(a, Succ(k), Nat::succ_ne_zero(k)),
+          Nat::div_nz(a, Succ(k), Nat::succ_ne_zero(k)),
+          euclid_loop(f, Succ(k), Nat::rem_nz(a, Succ(k), Nat::succ_ne_zero(k))),
+          coefficient_loop(f, Succ(k), Nat::rem_nz(a, Succ(k), Nat::succ_ne_zero(k))),
+          coefficient_correct(
+            f,
+            Succ(k),
+            Nat::rem_nz(a, Succ(k), Nat::succ_ne_zero(k)),
+            remainder_bound(a, k, f, bound)
+          )
+        )
+      )
+    }
+  }
+}
+pub theorem bezout_balance(a: Nat, b: Nat): balance(a, b, gcd(a, b), bezout_coefficients(a, b)) {
+  coefficient_correct(b, a, b, Nat::le_refl(b))
+}
+
+pub fn coefficient_a(c: Coefficients): Int {
+  match c: Int { Coeff(pa, na, pb, nb) => int!(`diff(pa, na)`) }
+}
+pub fn coefficient_b(c: Coefficients): Int {
+  match c: Int { Coeff(pa, na, pb, nb) => int!(`diff(pb, nb)`) }
+}
+theorem zero_term(a: Nat, b: Nat): nat!(`a + 0 * b = a`) {
+  Eq::congr((x: Nat) => nat!(`a + x`), Nat::mul_zero_left(b))
+}
+theorem mul_difference(a: Nat, p: Nat, n: Nat): int!(`↑a * diff(p, n) = diff(a * p, a * n)`) {
+  calc int!(`↑a * diff(p, n)`) {
+    = int!(`diff(a, 0) * diff(p, n)`) from Eq::congr(
+      (x: Int) => int!(`x * diff(p, n)`),
+      Eq::sym(Int::sub_nat_zero(a))
+    )
+    = int!(`diff(a * p + 0 * n, a * n + 0 * p)`) from Int::mul_sub(a, 0, p, n)
+    = int!(`diff(a * p, a * n)`) from Int::sub_congr(
+      nat!(`a * p + 0 * n`),
+      nat!(`a * n + 0 * p`),
+      nat!(`a * p`),
+      nat!(`a * n`),
+      zero_term(nat!(`a * p`), n),
+      zero_term(nat!(`a * n`), p)
+    )
+  }
+}
+pub theorem signed_balance(
+  a: Nat,
+  b: Nat,
+  g: Nat,
+  c: Coefficients,
+  h: balance(a, b, g, c)
+): int!(`↑a * coefficient_a(c) + ↑b * coefficient_b(c) = ↑g`) {
+  match c: int!(`↑a * coefficient_a(c) + ↑b * coefficient_b(c) = ↑g`) {
+    Coeff(pa, na, pb, nb) => calc int!(`↑a * diff(pa, na) + ↑b * diff(pb, nb)`) {
+      = int!(`diff(a * pa, a * na) + ↑b * diff(pb, nb)`) from Eq::congr(
+        (x: Int) => int!(`x + ↑b * diff(pb, nb)`),
+        mul_difference(a, pa, na)
+      )
+      = int!(`diff(a * pa, a * na) + diff(b * pb, b * nb)`) from Eq::congr(
+        (x: Int) => int!(`diff(a * pa, a * na) + x`),
+        mul_difference(b, pb, nb)
+      )
+      = int!(`diff(a * pa + b * pb, a * na + b * nb)`) from Int::add_sub(
+        nat!(`a * pa`),
+        nat!(`a * na`),
+        nat!(`b * pb`),
+        nat!(`b * nb`)
+      )
+      = int!(`diff(g, 0)`) from Int::sub_eq(
+        nat!(`a * pa + b * pb`),
+        nat!(`a * na + b * nb`),
+        g,
+        0,
+        Eq::sym(h)
+      )
+      = int!(`↑g`) from Int::sub_nat_zero(g)
+    }
+  }
+}
+pub theorem bezout_identity(
+  a: Nat,
+  b: Nat
+): int!(
+  `↑a * coefficient_a(bezout_coefficients(a, b)) + ↑b * coefficient_b(bezout_coefficients(a, b)) = ↑gcd(a, b)`
+) {
+  signed_balance(a, b, gcd(a, b), bezout_coefficients(a, b), bezout_balance(a, b))
+}

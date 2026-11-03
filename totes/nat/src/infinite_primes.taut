@@ -1,0 +1,140 @@
+import std::Base
+import std::Nat
+import std::NatDiv
+import std::IntLaws
+import "notation.taut"
+import "relations.taut"
+import "arithmetic.taut"
+import "divisibility.taut"
+import "subtraction.taut"
+import "primes.taut"
+import "primality.taut"
+import "factorization.taut"
+import "unique_factorization.taut"
+
+pub fn factorial(n: Nat): Nat {
+  match n: Nat { Zero => 1
+    Succ(k) => nat!(`Succ(k) * factorial(k)`) }
+}
+theorem positive_mul(a: Nat, b: Nat, ha: nat!(`0 < a`), hb: nat!(`0 < b`)): nat!(`0 < a * b`) {
+  match a: nat!(`0 < a * b`) {
+    Zero => False::elim(false_ne_true(ha))
+    Succ(k) => match b: nat!(`0 < Succ(k) * b`) {
+      Zero => False::elim(false_ne_true(hb))
+      Succ(j) => Eq::congr((x: Nat) => Nat::lt(0, x), Nat::mul_succ_left(k, Succ(j)))
+    }
+  }
+}
+pub theorem factorial_positive(n: Nat): nat!(`0 < factorial(n)`) {
+  match n: nat!(`0 < factorial(n)`) {
+    Zero => Refl
+    Succ(k) => positive_mul(Succ(k), factorial(k), Refl, factorial_positive(k))
+  }
+}
+pub theorem divides_factorial(
+  d: Nat,
+  n: Nat,
+  positive: nat!(`0 < d`),
+  bound: nat!(`d ≤ n`)
+): nat_rel!(`d | factorial(n)`) {
+  match n: nat_rel!(`d | factorial(n)`) {
+    Zero => match d: nat_rel!(`d | factorial(0)`) {
+      Zero => False::elim(false_ne_true(positive))
+      Succ(k) => False::elim(false_ne_true(Eq::trans(Eq::sym(Nat::lt_zero_false(k)), bound)))
+    }
+    Succ(k) => Or::elim(
+      boolean_cases(Nat::eq(d, Succ(k))),
+      (ne: Nat::eq(d, Succ(k)) = false) => divides_mul_left(
+        d,
+        factorial(k),
+        Succ(k),
+        divides_factorial(d, k, positive, Nat::lt_succ_ne(d, Succ(k), bound, ne))
+      ),
+      (eq: Nat::eq(d, Succ(k)) = true) => Eq::subst(
+        (x: Nat) => nat_rel!(`x | factorial(Succ(k))`),
+        Eq::sym(Nat::eq_sound(d, Succ(k), eq)),
+        By(factorial(k), Refl)
+      )
+    )
+  }
+}
+theorem le_false_lt(a: Nat, b: Nat, h: Nat::le(a, b) = false): nat!(`b < a`) {
+  match a: nat!(`b < a`) {
+    Zero => False::elim(true_ne_false(Eq::trans(Eq::sym(Nat::le_zero(b)), h)))
+    Succ(k) => match b: nat!(`b < Succ(k)`) {
+      Zero => Refl
+      Succ(j) => le_false_lt(k, j, h)
+    }
+  }
+}
+theorem prime_factor_above(
+  n: Nat,
+  p: Nat,
+  hp: Prime(p),
+  divides: nat_rel!(`p | Succ(factorial(n))`)
+): nat!(`n < p`) {
+  Or::elim(
+    boolean_cases(Nat::le(p, n)),
+    (outside: Nat::le(p, n) = false) => le_false_lt(p, n, outside),
+    (inside: nat!(`p ≤ n`)) => False::elim(
+      prime_not_divides_one(
+        p,
+        hp,
+        Eq::subst(
+          (x: Nat) => nat_rel!(`p | x`),
+          sub_sum_left(factorial(n), 1),
+          divides_subtract(
+            p,
+            Succ(factorial(n)),
+            factorial(n),
+            divides,
+            divides_factorial(p, n, Nat::lt_of_succ_lt(0, p, prime_gt_one(p, hp)), inside)
+          )
+        )
+      )
+    )
+  )
+}
+pub fn first_or_two(xs: List(Nat)): Nat {
+  match xs: Nat { Nil => 2
+    Cons(x, rest) => x }
+}
+pub fn prime_above(n: Nat): Nat { first_or_two(factorize(Succ(factorial(n)))) }
+pub(open) inductive AbovePrime(n: Nat, p: Nat): Prop {
+  Above(prime: Prime(p), greater: nat!(`n < p`)): AbovePrime(n, p)
+}
+theorem head_prime(p: Nat, rest: List(Nat), h: AllPrime(Cons(p, rest))): Prime(p) {
+  match h: Prime(p) { PrimesCons(x, xs, hp, hr) => hp }
+}
+theorem factor_head_above(
+  n: Nat,
+  xs: List(Nat),
+  h: Factorization(Succ(factorial(n)), xs)
+): AbovePrime(n, first_or_two(xs)) {
+  match xs: AbovePrime(n, first_or_two(xs)) {
+    Nil => False::elim(
+      false_ne_true(
+        Eq::trans(
+          Eq::congr(
+            (x: Nat) => Nat::lt(0, x),
+            Eq::congr(Nat::pred, factorization_product(Succ(factorial(n)), Nil, h))
+          ),
+          factorial_positive(n)
+        )
+      )
+    )
+    Cons(p, rest) => Above(
+      head_prime(p, rest, factorization_primes(Succ(factorial(n)), Cons(p, rest), h)),
+      prime_factor_above(
+        n,
+        p,
+        head_prime(p, rest, factorization_primes(Succ(factorial(n)), Cons(p, rest), h)),
+        By(prod(rest), factorization_product(Succ(factorial(n)), Cons(p, rest), h))
+      )
+    )
+  }
+}
+// A constructive infinitude theorem: prime_above computes a witness for every bound.
+pub theorem prime_above_correct(n: Nat): AbovePrime(n, prime_above(n)) {
+  factor_head_above(n, factorize(Succ(factorial(n))), factorize_correct(Succ(factorial(n)), Refl))
+}

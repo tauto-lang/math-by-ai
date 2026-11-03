@@ -1,0 +1,18 @@
+import std::Base
+import "notation.taut"
+
+// Congruence for a binary operation, without choosing either argument first.
+pub theorem congr2<A, B, C>(
+  f: (A, B) -> C,
+  a: A,
+  b: A,
+  c: B,
+  d: B,
+  ab: logic!(`a = b`),
+  cd: logic!(`c = d`)
+): logic!(`f(a, c) = f(b, d)`) {
+  calc logic!(`f(a, c)`) {
+    = logic!(`f(b, c)`) from Eq::congr((x: A) => logic!(`f(x, c)`), ab)
+    = logic!(`f(b, d)`) from Eq::congr((y: B) => logic!(`f(b, y)`), cd)
+  }
+}

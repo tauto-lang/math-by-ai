@@ -1,0 +1,9 @@
+package {
+  name = "math"
+  version = "0.1.0"
+}
+dependencies {
+  core { path = "totes/core" }
+  algebra { path = "totes/algebra" }
+  nat { path = "totes/nat" }
+}

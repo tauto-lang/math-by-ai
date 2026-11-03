@@ -1,0 +1,21 @@
+import std::Base
+import std::Nat
+import "notation.taut"
+import core::order
+
+pub fn nat_below(a: Nat, b: Nat): Prop { nat!(`a ≤ b`) }
+pub theorem natural_order(): PartialOrder(Nat, nat_below) {
+  PartialOrder::Mk(
+    (a: Nat) => Nat::le_refl(a),
+    (a: Nat, b: Nat, c: Nat, ab: nat!(`a ≤ b`), bc: nat!(`b ≤ c`)) => Nat::le_trans(
+      a,
+      b,
+      c,
+      ab,
+      bc
+    ),
+    (a: Nat, b: Nat, ab: nat!(`a ≤ b`), ba: nat!(`b ≤ a`)) => Nat::le_antisym(a, b, ab, ba)
+  )
+}
+pub theorem zero_least(a: Nat): nat!(`0 ≤ a`) { Refl }
+pub theorem below_successor(a: Nat): nat!(`a ≤ Succ(a)`) { Nat::le_succ(a) }

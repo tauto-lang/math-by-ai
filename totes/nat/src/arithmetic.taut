@@ -1,0 +1,75 @@
+import std::Base
+import std::Nat
+import "notation.taut"
+import algebra::monoid
+import algebra::commutative
+import algebra::semiring
+
+pub theorem additive_monoid(): Monoid(Nat, Nat::add, 0) {
+  Monoid::Mk(
+    (a: Nat, b: Nat, c: Nat) => Nat::add_assoc(a, b, c),
+    (a: Nat) => Nat::add_zero_left(a),
+    (a: Nat) => Refl
+  )
+}
+
+pub theorem multiplicative_monoid(): Monoid(Nat, Nat::mul, 1) {
+  Monoid::Mk(
+    (a: Nat, b: Nat, c: Nat) => Nat::mul_assoc(a, b, c),
+    (a: Nat) => Nat::mul_one_left(a),
+    (a: Nat) => Nat::mul_one_right(a)
+  )
+}
+
+pub fn sum(xs: List(Nat)): Nat { product(Nat::add, 0, xs) }
+pub fn prod(xs: List(Nat)): Nat { product(Nat::mul, 1, xs) }
+
+pub theorem sum_append(
+  xs: List(Nat),
+  ys: List(Nat)
+): nat!(`sum(List::append(xs, ys)) = sum(xs) + sum(ys)`) {
+  product_append(Nat::add, 0, additive_monoid(), xs, ys)
+}
+pub theorem prod_append(
+  xs: List(Nat),
+  ys: List(Nat)
+): nat!(`prod(List::append(xs, ys)) = prod(xs) * prod(ys)`) {
+  product_append(Nat::mul, 1, multiplicative_monoid(), xs, ys)
+}
+
+pub theorem additive_comm_monoid(): CommMonoid(Nat, Nat::add, 0) {
+  CommMonoid::Mk(additive_monoid(), (a: Nat, b: Nat) => Nat::add_comm(a, b))
+}
+pub theorem multiplicative_comm_monoid(): CommMonoid(Nat, Nat::mul, 1) {
+  CommMonoid::Mk(multiplicative_monoid(), (a: Nat, b: Nat) => Nat::mul_comm(a, b))
+}
+pub theorem natural_semiring(): Semiring(Nat, Nat::add, 0, Nat::mul, 1) {
+  Semiring::Mk(
+    additive_comm_monoid(),
+    multiplicative_monoid(),
+    (a: Nat, b: Nat, c: Nat) => Nat::mul_add_distrib(a, b, c),
+    (a: Nat, b: Nat, c: Nat) => Nat::mul_add_distrib_right(a, b, c),
+    (a: Nat) => Nat::mul_zero_left(a),
+    (a: Nat) => Nat::mul_zero_right(a)
+  )
+}
+pub theorem sum_permutation(
+  xs: List(Nat),
+  ys: List(Nat),
+  p: Permutation(Nat, xs, ys)
+): nat!(`sum(xs) = sum(ys)`) {
+  product_permutation(Nat::add, 0, additive_comm_monoid(), xs, ys, p)
+}
+pub theorem prod_permutation(
+  xs: List(Nat),
+  ys: List(Nat),
+  p: Permutation(Nat, xs, ys)
+): nat!(`prod(xs) = prod(ys)`) {
+  product_permutation(Nat::mul, 1, multiplicative_comm_monoid(), xs, ys, p)
+}
+pub theorem scale_sum(
+  a: Nat,
+  xs: List(Nat)
+): nat!(`a * sum(xs)`) = sum(map_list((x: Nat) => nat!(`a * x`), xs)) {
+  mul_sum_left(Nat::add, 0, Nat::mul, 1, natural_semiring(), a, xs)
+}

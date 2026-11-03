@@ -1,0 +1,161 @@
+import std::Base
+import std::Nat
+import std::UInt
+import std::NatNorm
+import std::NatDiv
+import std::IntLaws
+import "notation.taut"
+import "relations.taut"
+import algebra::monoid
+import algebra::commutative
+import "arithmetic.taut"
+import "divisibility.taut"
+import "primes.taut"
+import "factorization.taut"
+
+pub theorem prime_ne_one(p: Nat, hp: Prime(p), eq: nat!(`p = 1`)): False {
+  false_ne_true(Eq::trans(Eq::sym(Eq::congr((x: Nat) => Nat::lt(1, x), eq)), prime_gt_one(p, hp)))
+}
+pub theorem prime_not_divides_one(p: Nat, hp: Prime(p), h: nat_rel!(`p | 1`)): False {
+  false_ne_true(
+    Eq::trans(
+      Eq::sym(Nat::lt_irrefl(p)),
+      Nat::le_lt_trans(p, 1, p, divides_bound(p, 0, h), prime_gt_one(p, hp))
+    )
+  )
+}
+pub theorem prime_divides_prime(
+  p: Nat,
+  q: Nat,
+  hp: Prime(p),
+  hq: Prime(q),
+  h: nat_rel!(`p | q`)
+): nat!(`p = q`) {
+  Or::elim(
+    prime_divisor(q, hq, p, h),
+    (eq: p = 1) => False::elim(prime_ne_one(p, hp, eq)),
+    (eq: p = q) => eq
+  )
+}
+
+pub(open) inductive ExtractPrime(p: Nat, xs: List(Nat)): Prop {
+  Extracted(
+    rest: List(Nat),
+    primes: AllPrime(rest),
+    product: nat!(`prod(xs) = p * prod(rest)`),
+    permutation: Permutation(Nat, xs, Cons(p, rest))
+  ): ExtractPrime(p, xs)
+}
+pub theorem extract_prime(
+  p: Nat,
+  xs: List(Nat),
+  hp: Prime(p),
+  all: AllPrime(xs),
+  divides: nat_rel!(`p | prod(xs)`)
+): ExtractPrime(p, xs) {
+  match all: ExtractPrime(p, xs) {
+    PrimesNil => False::elim(prime_not_divides_one(p, hp, divides))
+    PrimesCons(q, rest, hq, hr) => Or::elim(prime_divides_product(p, q, prod(rest), hp, divides),
+      (head: nat_rel!(`p | q`)) => {
+        let eq := prime_divides_prime(p, q, hp, hq, head)
+        Extracted(rest, hr, Eq::congr((x: Nat) => nat!(`x * prod(rest)`), Eq::sym(eq)),
+          Eq::subst((x: Nat) => Permutation(Nat, Cons(q, rest), Cons(x, rest)), Eq::sym(eq), permutation_refl(Cons(q, rest))))
+      },
+      (tail: nat_rel!(`p | prod(rest)`)) => match extract_prime(p, rest, hp, hr, tail): ExtractPrime(p, Cons(q, rest)) {
+        Extracted(remaining, primes, product, perm) => Extracted(Cons(q, remaining), PrimesCons(q, remaining, hq, primes),
+          calc nat!(`q * prod(rest)`) {
+            = nat!(`q * (p * prod(remaining))`) from Eq::congr((x: Nat) => nat!(`q * x`), product)
+            = nat!(`p * (q * prod(remaining))`) from left_commute(
+              Nat::mul,
+              1,
+              multiplicative_comm_monoid(),
+              q,
+              p,
+              prod(remaining)
+            )
+          },
+          Chain(Cons(q, rest), Cons(q, Cons(p, remaining)), Cons(p, Cons(q, remaining)),
+            Keep(q, rest, Cons(p, remaining), perm), Swap(q, p, remaining)))
+      })
+  }
+}
+theorem cancel_prime(p: Nat, a: Nat, b: Nat, hp: Prime(p), h: nat!(`p * a = p * b`)): nat!(`a = b`) {
+  match p: nat!(`a = b`) {
+    Zero => False::elim(false_ne_true(prime_gt_one(0, hp)))
+    Succ(k) => Nat::mul_cancel(
+      a,
+      b,
+      k,
+      calc nat!(`a * Succ(k)`) {
+        = nat!(`Succ(k) * a`) from Eq::sym(Nat::mul_comm(Succ(k), a))
+        = nat!(`Succ(k) * b`) from h
+        = nat!(`b * Succ(k)`) from Nat::mul_comm(Succ(k), b)
+      }
+    )
+  }
+}
+
+pub theorem prime_products_unique(
+  xs: List(Nat),
+  ys: List(Nat),
+  hx: AllPrime(xs),
+  hy: AllPrime(ys),
+  product: nat!(`prod(xs) = prod(ys)`)
+): Permutation(Nat, xs, ys) {
+  match hx: Permutation(Nat, xs, ys) {
+    PrimesNil => match hy: Permutation(Nat, Nil, ys) {
+      PrimesNil => Empty
+      PrimesCons(p, rest, hp, hr) => False::elim(
+        prime_not_divides_one(
+          p,
+          hp,
+          Eq::subst((n: Nat) => nat_rel!(`p | n`), Eq::sym(product), By(prod(rest), Refl))
+        )
+      )
+    }
+    PrimesCons(p, rest, hp, hr) => match extract_prime(
+      p,
+      ys,
+      hp,
+      hy,
+      Eq::subst((n: Nat) => nat_rel!(`p | n`), product, By(prod(rest), Refl))
+    ): Permutation(Nat, Cons(p, rest), ys) {
+      Extracted(remaining, primes, eq, perm) => Chain(
+        Cons(p, rest),
+        Cons(p, remaining),
+        ys,
+        Keep(
+          p,
+          rest,
+          remaining,
+          prime_products_unique(
+            rest,
+            remaining,
+            hr,
+            primes,
+            cancel_prime(p, prod(rest), prod(remaining), hp, Eq::trans(product, eq))
+          )
+        ),
+        permutation_sym(ys, Cons(p, remaining), perm)
+      )
+    }
+  }
+}
+pub theorem factorization_unique(
+  n: Nat,
+  xs: List(Nat),
+  ys: List(Nat),
+  hx: Factorization(n, xs),
+  hy: Factorization(n, ys)
+): Permutation(Nat, xs, ys) {
+  prime_products_unique(
+    xs,
+    ys,
+    factorization_primes(n, xs, hx),
+    factorization_primes(n, ys, hy),
+    calc nat!(`prod(xs)`) {
+      = n from factorization_product(n, xs, hx)
+      = nat!(`prod(ys)`) from Eq::sym(factorization_product(n, ys, hy))
+    }
+  )
+}

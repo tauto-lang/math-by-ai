@@ -1,0 +1,23 @@
+import std::Base
+import std::Nat
+import "divisibility.taut"
+import "primes.taut"
+import "primality.taut"
+import "factor_search.taut"
+
+pub theorem is_prime_complete(n: Nat, hp: Prime(n)): is_prime(n) = true {
+  Or::elim(boolean_cases(is_prime(n)),
+    (bad: is_prime(n) = false) => {
+      let d := find_factor(n, n)
+      let w := searched_factor(n, prime_gt_one(n, hp), bad)
+      Or::elim(prime_divisor(n, hp, d, By(quotient(n, d), factor_product(n, d, w))),
+        (one: d = 1) => False::elim(false_ne_true(Eq::trans(
+          Eq::sym(Eq::congr((x: Nat) => Nat::lt(1, x), one)), factor_positive(n, d, w)))),
+        (equal: d = n) => False::elim(true_ne_false(Eq::trans(
+          Eq::sym(Nat::eq_refl(d)), Eq::trans(Eq::congr((x: Nat) => Nat::eq(d, x), equal), factor_proper(n, d, w))))))
+    },
+    (good: is_prime(n) = true) => good)
+}
+pub theorem is_prime_false(n: Nat, bad: is_prime(n) = false, hp: Prime(n)): False {
+  true_ne_false(Eq::trans(Eq::sym(is_prime_complete(n, hp)), bad))
+}

@@ -1,0 +1,234 @@
+import std::Base
+import std::Nat
+import std::NatDiv
+import std::IntLaws
+import "notation.taut"
+import "relations.taut"
+import core::notation
+import "divisibility.taut"
+import "subtraction.taut"
+
+pub(open) inductive IsGcd(a: Nat, b: Nat, g: Nat): Prop {
+  Greatest(
+    left: nat_rel!(`g | a`),
+    right: nat_rel!(`g | b`),
+    greatest: (d: Nat, da: nat_rel!(`d | a`), db: nat_rel!(`d | b`)) -> nat_rel!(`d | g`)
+  ): IsGcd(a, b, g)
+}
+pub theorem gcd_left(a: Nat, b: Nat, g: Nat, h: IsGcd(a, b, g)): nat_rel!(`g | a`) {
+  match h: nat_rel!(`g | a`) { Greatest(l, r, all) => l }
+}
+pub theorem gcd_right(a: Nat, b: Nat, g: Nat, h: IsGcd(a, b, g)): nat_rel!(`g | b`) {
+  match h: nat_rel!(`g | b`) { Greatest(l, r, all) => r }
+}
+pub theorem gcd_greatest(
+  a: Nat,
+  b: Nat,
+  g: Nat,
+  h: IsGcd(a, b, g),
+  d: Nat,
+  da: nat_rel!(`d | a`),
+  db: nat_rel!(`d | b`)
+): nat_rel!(`d | g`) {
+  match h: nat_rel!(`d | g`) { Greatest(l, r, all) => all(d, da, db) }
+}
+pub theorem remainder_sub(
+  a: Nat,
+  b: Nat,
+  nz: logic!(`¬(b = 0)`)
+): nat!(`Nat::rem_nz(a, b, nz) = a - b * Nat::div_nz(a, b, nz)`) {
+  calc nat!(`Nat::rem_nz(a, b, nz)`) {
+    = nat!(
+      `(b * Nat::div_nz(a, b, nz) + Nat::rem_nz(a, b, nz)) - b * Nat::div_nz(a, b, nz)`
+    ) from Eq::sym(sub_sum_left(nat!(`b * Nat::div_nz(a, b, nz)`), Nat::rem_nz(a, b, nz)))
+    = nat!(`a - b * Nat::div_nz(a, b, nz)`) from Eq::congr(
+      (x: Nat) => nat!(`x - b * Nat::div_nz(a, b, nz)`),
+      Nat::div_mod_eq(a, b, nz)
+    )
+  }
+}
+pub theorem divides_remainder(
+  d: Nat,
+  a: Nat,
+  b: Nat,
+  nz: logic!(`¬(b = 0)`),
+  da: nat_rel!(`d | a`),
+  db: nat_rel!(`d | b`)
+): nat_rel!(`d | Nat::rem_nz(a, b, nz)`) {
+  Eq::subst(
+    (x: Nat) => nat_rel!(`d | x`),
+    Eq::sym(remainder_sub(a, b, nz)),
+    divides_subtract(
+      d,
+      a,
+      nat!(`b * Nat::div_nz(a, b, nz)`),
+      da,
+      divides_mul_right(d, b, Nat::div_nz(a, b, nz), db)
+    )
+  )
+}
+pub theorem gcd_step(
+  a: Nat,
+  b: Nat,
+  nz: logic!(`¬(b = 0)`),
+  g: Nat,
+  h: IsGcd(b, Nat::rem_nz(a, b, nz), g)
+): IsGcd(a, b, g) {
+  Greatest(
+    Eq::subst(
+      (x: Nat) => nat_rel!(`g | x`),
+      Nat::div_mod_eq(a, b, nz),
+      divides_add(
+        g,
+        nat!(`b * Nat::div_nz(a, b, nz)`),
+        Nat::rem_nz(a, b, nz),
+        divides_mul_right(g, b, Nat::div_nz(a, b, nz), gcd_left(b, Nat::rem_nz(a, b, nz), g, h)),
+        gcd_right(b, Nat::rem_nz(a, b, nz), g, h)
+      )
+    ),
+    gcd_left(b, Nat::rem_nz(a, b, nz), g, h),
+    (d: Nat, da: nat_rel!(`d | a`), db: nat_rel!(`d | b`)) => gcd_greatest(
+      b,
+      Nat::rem_nz(a, b, nz),
+      g,
+      h,
+      d,
+      db,
+      divides_remainder(d, a, b, nz, da, db)
+    )
+  )
+}
+
+// The public function supplies b steps. Correctness proves these always suffice.
+pub fn euclid_loop(steps: Nat, a: Nat, b: Nat): Nat decreasing_by steps {
+  match b: Nat {
+    Zero => a
+    Succ(k) => match steps: Nat {
+      Zero => a
+      Succ(f) => euclid_loop(f, Succ(k), Nat::rem_nz(a, Succ(k), Nat::succ_ne_zero(k)))
+    }
+  }
+}
+pub fn gcd(a: Nat, b: Nat): Nat { euclid_loop(b, a, b) }
+
+pub theorem remainder_bound(
+  a: Nat,
+  b: Nat,
+  f: Nat,
+  h: nat!(`Succ(b) ≤ Succ(f)`)
+): nat!(`Nat::rem_nz(a, Succ(b), Nat::succ_ne_zero(b)) ≤ f`) {
+  Nat::le_trans(Nat::rem_nz(a, Succ(b), Nat::succ_ne_zero(b)), b, f, Nat::mod_succ_lt(a, b), h)
+}
+theorem loop_correct(
+  steps: Nat,
+  a: Nat,
+  b: Nat,
+  bound: nat!(`b ≤ steps`)
+): IsGcd(a, b, euclid_loop(steps, a, b)) {
+  match steps: IsGcd(a, b, euclid_loop(steps, a, b)) {
+    Zero => match b: IsGcd(a, b, euclid_loop(Zero, a, b)) {
+      Zero => Greatest(
+        divides_refl(a),
+        divides_zero(a),
+        (d: Nat, da: nat_rel!(`d | a`), db: nat_rel!(`d | 0`)) => da
+      )
+      Succ(k) => False::elim(false_ne_true(Eq::trans(Eq::sym(Nat::lt_zero_false(k)), bound)))
+    }
+    Succ(f) => match b: IsGcd(a, b, euclid_loop(Succ(f), a, b)) {
+      Zero => Greatest(
+        divides_refl(a),
+        divides_zero(a),
+        (d: Nat, da: nat_rel!(`d | a`), db: nat_rel!(`d | 0`)) => da
+      )
+      Succ(k) => gcd_step(
+        a,
+        Succ(k),
+        Nat::succ_ne_zero(k),
+        euclid_loop(f, Succ(k), Nat::rem_nz(a, Succ(k), Nat::succ_ne_zero(k))),
+        loop_correct(
+          f,
+          Succ(k),
+          Nat::rem_nz(a, Succ(k), Nat::succ_ne_zero(k)),
+          remainder_bound(a, k, f, bound)
+        )
+      )
+    }
+  }
+}
+pub theorem gcd_correct(a: Nat, b: Nat): IsGcd(a, b, gcd(a, b)) {
+  loop_correct(b, a, b, Nat::le_refl(b))
+}
+
+pub theorem gcd_unique(
+  a: Nat,
+  b: Nat,
+  g: Nat,
+  h: Nat,
+  hg: IsGcd(a, b, g),
+  hh: IsGcd(a, b, h)
+): nat!(`g = h`) {
+  divides_antisym(
+    g,
+    h,
+    gcd_greatest(a, b, h, hh, g, gcd_left(a, b, g, hg), gcd_right(a, b, g, hg)),
+    gcd_greatest(a, b, g, hg, h, gcd_left(a, b, h, hh), gcd_right(a, b, h, hh))
+  )
+}
+pub theorem gcd_comm(a: Nat, b: Nat): nat!(`gcd(a, b) = gcd(b, a)`) {
+  let h := gcd_correct(b, a)
+  gcd_unique(
+    a,
+    b,
+    gcd(a, b),
+    gcd(b, a),
+    gcd_correct(a, b),
+    Greatest(
+      gcd_right(b, a, gcd(b, a), h),
+      gcd_left(b, a, gcd(b, a), h),
+      (d: Nat, da: nat_rel!(`d | a`), db: nat_rel!(`d | b`)) => gcd_greatest(
+        b,
+        a,
+        gcd(b, a),
+        h,
+        d,
+        db,
+        da
+      )
+    )
+  )
+}
+pub theorem gcd_self(a: Nat): nat!(`gcd(a, a) = a`) {
+  gcd_unique(
+    a,
+    a,
+    gcd(a, a),
+    a,
+    gcd_correct(a, a),
+    Greatest(
+      divides_refl(a),
+      divides_refl(a),
+      (d: Nat, da: nat_rel!(`d | a`), db: nat_rel!(`d | a`)) => da
+    )
+  )
+}
+pub theorem gcd_zero_right(a: Nat): nat!(`gcd(a, 0) = a`) { Refl }
+pub theorem gcd_zero_left(a: Nat): nat!(`gcd(0, a) = a`) {
+  calc nat!(`gcd(0, a)`) {
+    = nat!(`gcd(a, 0)`) from gcd_comm(0, a)
+    = a from gcd_zero_right(a)
+  }
+}
+pub theorem gcd_euclid(
+  a: Nat,
+  b: Nat,
+  nz: logic!(`¬(b = 0)`)
+): nat!(`gcd(a, b) = gcd(b, Nat::rem_nz(a, b, nz))`) {
+  gcd_unique(
+    a,
+    b,
+    gcd(a, b),
+    gcd(b, Nat::rem_nz(a, b, nz)),
+    gcd_correct(a, b),
+    gcd_step(a, b, nz, gcd(b, Nat::rem_nz(a, b, nz)), gcd_correct(b, Nat::rem_nz(a, b, nz)))
+  )
+}

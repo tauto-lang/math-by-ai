@@ -1,0 +1,78 @@
+import std::Base
+import std::Nat
+import std::Int
+import std::IntLaws
+import core::notation
+import algebra::notation
+import algebra::semiring_notation
+import nat::notation
+import nat::integer_notation
+import nat::relations
+import nat::divisibility
+
+// Exact association, caller name hygiene, precedence, and expression positions.
+theorem natural_term(
+  g: Nat,
+  a: Nat,
+  na: Nat,
+  b: Nat,
+  nb: Nat,
+  c: Nat
+): nat!(
+  `(g + (a * na + b * nb)) * c`
+) = Nat::mul(Nat::add(g, Nat::add(Nat::mul(a, na), Nat::mul(b, nb))), c) { Refl }
+theorem natural_precedence(): nat!(`2 + 3 * 4 = 14`) { Refl }
+theorem natural_subtract(): nat!(`7 - 2 - 1 = 4`) { Refl }
+theorem caller_function(f: (Nat) -> Nat, a: Nat): nat!(`f(a + 1)`) = f(Nat::add(a, 1)) { Refl }
+theorem natural_order(a: Nat): nat!(`a ≤ a`) { Nat::le_refl(a) }
+theorem algebra_term<A>(
+  op: (A, A) -> A,
+  unit: A,
+  inv: (A) -> A,
+  a: A,
+  b: A
+): alg!(`op, unit; inv(a) ⋆ (a ⋆ b)`) = op(inv(a), op(a, b)) { Refl }
+theorem semiring_term<A>(
+  add: (A, A) -> A,
+  zero: A,
+  mul: (A, A) -> A,
+  one: A,
+  a: A,
+  b: A,
+  c: A
+): semiring!(`add, zero, mul, one; (a + b) * c + 0`) = add(mul(add(a, b), c), zero) { Refl }
+theorem integer_term(
+  a: Nat,
+  p: Nat,
+  n: Nat
+): int!(`↑a * diff(p, n)`) = Int::mul(IntOfNat(a), Int::sub_nat(p, n)) { Refl }
+theorem integer_literals(): int!(`2 + 3 * 4 = 14`) { Refl }
+theorem logical_expression(P: Prop, Q: Prop, h: And(P, Q)): logic!(`P ∧ Q`) { h }
+theorem logical_disjunction(P: Prop, Q: Prop, h: P): logic!(`P ∨ Q`) { OrInl(h) }
+theorem logical_implication(P: Prop): logic!(`P → P`) { (h: P) => h }
+theorem logical_equality<A>(a: A): logic!(`a = a`) { Refl }
+theorem legacy_relation(): nat_rel!(`6 | 42`) { By(7, Refl) }
+
+theorem unicode_names(α: Nat): nat!(`α + 1`) = Nat::add(α, 1) { Refl }
+theorem algebra_unit_literal<A>(op: (A, A) -> A, unit: A): alg!(`op, unit; ε`) = unit { Refl }
+theorem integer_native_arithmetic(
+  a: Nat,
+  p: Nat,
+  n: Nat
+): int!(`diff(a * p, a * n)`) = Int::sub_nat(Nat::mul(a, p), Nat::mul(a, n)) { Refl }
+
+theorem integer_negative(): int!(`-3 * 2 + 1 = -5`) { Refl }
+theorem logical_precedence(
+  P: Prop,
+  Q: Prop,
+  R: Prop,
+  h: Or(P, And(Q, R))
+): logic!(`P ∨ Q ∧ R`) { h }
+theorem logical_right_implication(P: Prop, Q: Prop): logic!(`P → Q → P`) { (h: P, k: Q) => h }
+
+theorem caller_hygiene(
+  nat_expression: Nat,
+  nat_sum: Nat
+): nat!(`nat_expression + nat_sum = nat_sum + nat_expression`) {
+  Nat::add_comm(nat_expression, nat_sum)
+}

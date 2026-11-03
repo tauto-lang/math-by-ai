@@ -1,0 +1,35 @@
+import std::prelude::Macro
+
+// Keep scanner offsets in UTF-8 bytes. Leave embedded Tauto expressions
+// unclassified here rather than painting their contents as one DSL token.
+pub fn math_token_kind(t: SynTok): Option(Text) ! {Div} {
+  if t.skipped || t.kind == "TautoExpr" { None } else {
+    if t.kind == "Diff" { Some("function") } else {
+      if t.text == "ε" || t.kind == "Identity" || t.kind == "ZeroLit" || t.kind == "OneLit" {
+        Some("enumMember")
+      } else {
+        if t.kind == "Name" { Some("variable") } else {
+          if t.kind == "Num" { Some("number") } else { Some("operator") }
+        }
+      }
+    }
+  }
+}
+pub fn next_is_call(ts: List(SynTok)): Bool ! {Div} {
+  match ts {
+    Nil => false
+    Cons(t, rest) => if t.skipped { next_is_call(rest) } else { t.text == "(" }
+  }
+}
+pub fn math_tokens(ts: List(SynTok)): List(SynHighlight) ! {Div} {
+  match ts {
+    Nil => Nil
+    Cons(t, rest) => match math_token_kind(t) {
+      None => math_tokens(rest)
+      Some(kind) => {
+        let semantic := if t.kind == "Name" && next_is_call(rest) { "function" } else { kind }
+        Cons(SynHighlight { start: t.start, end: t.end, kind: semantic }, math_tokens(rest))
+      }
+    }
+  }
+}

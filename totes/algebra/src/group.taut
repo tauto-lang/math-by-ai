@@ -1,0 +1,227 @@
+import std::Base
+import "notation.taut"
+import core::notation
+import "monoid.taut"
+
+// No commutativity assumption: all theorems apply to nonabelian groups.
+pub(open) inductive Group(A: Type, op: (A, A) -> A, unit: A, inv: (A) -> A): Prop {
+  Mk(
+    monoid: Monoid(A, op, unit),
+    left_inverse: (a: A) -> alg!(`op, unit; inv(a) ⋆ a = ε`),
+    right_inverse: (a: A) -> alg!(`op, unit; a ⋆ inv(a) = ε`)
+  ): Group(A, op, unit, inv)
+}
+pub theorem group_monoid<A>(
+  op: (A, A) -> A,
+  unit: A,
+  inv: (A) -> A,
+  g: Group(A, op, unit, inv)
+): Monoid(A, op, unit) {
+  match g: Monoid(A, op, unit) { Mk(m, l, r) => m }
+}
+pub theorem inverse_left<A>(
+  op: (A, A) -> A,
+  unit: A,
+  inv: (A) -> A,
+  g: Group(A, op, unit, inv),
+  a: A
+): alg!(`op, unit; inv(a) ⋆ a = ε`) {
+  match g: alg!(`op, unit; inv(a) ⋆ a = ε`) { Mk(m, l, r) => l(a) }
+}
+pub theorem inverse_right<A>(
+  op: (A, A) -> A,
+  unit: A,
+  inv: (A) -> A,
+  g: Group(A, op, unit, inv),
+  a: A
+): alg!(`op, unit; a ⋆ inv(a) = ε`) {
+  match g: alg!(`op, unit; a ⋆ inv(a) = ε`) { Mk(m, l, r) => r(a) }
+}
+pub theorem undo_left<A>(
+  op: (A, A) -> A,
+  unit: A,
+  inv: (A) -> A,
+  g: Group(A, op, unit, inv),
+  a: A,
+  b: A
+): alg!(`op, unit; inv(a) ⋆ (a ⋆ b) = b`) {
+  let m := group_monoid(op, unit, inv, g)
+  calc alg!(`op, unit; inv(a) ⋆ (a ⋆ b)`) {
+    = alg!(`op, unit; inv(a) ⋆ a ⋆ b`) from Eq::sym(assoc(op, unit, m, inv(a), a, b))
+    = alg!(`op, unit; ε ⋆ b`) from Eq::congr(
+      (x: A) => alg!(`op, unit; x ⋆ b`),
+      inverse_left(op, unit, inv, g, a)
+    )
+    = b from left_unit(op, unit, m, b)
+  }
+}
+pub theorem undo_right<A>(
+  op: (A, A) -> A,
+  unit: A,
+  inv: (A) -> A,
+  g: Group(A, op, unit, inv),
+  a: A,
+  b: A
+): alg!(`op, unit; b ⋆ a ⋆ inv(a) = b`) {
+  let m := group_monoid(op, unit, inv, g)
+  calc alg!(`op, unit; b ⋆ a ⋆ inv(a)`) {
+    = alg!(`op, unit; b ⋆ (a ⋆ inv(a))`) from assoc(op, unit, m, b, a, inv(a))
+    = alg!(`op, unit; b ⋆ ε`) from Eq::congr(
+      (x: A) => alg!(`op, unit; b ⋆ x`),
+      inverse_right(op, unit, inv, g, a)
+    )
+    = b from right_unit(op, unit, m, b)
+  }
+}
+pub theorem cancel_left<A>(
+  op: (A, A) -> A,
+  unit: A,
+  inv: (A) -> A,
+  g: Group(A, op, unit, inv),
+  a: A,
+  b: A,
+  c: A,
+  h: alg!(`op, unit; a ⋆ b = a ⋆ c`)
+): b = c {
+  calc b {
+    = alg!(`op, unit; inv(a) ⋆ (a ⋆ b)`) from Eq::sym(undo_left(op, unit, inv, g, a, b))
+    = alg!(`op, unit; inv(a) ⋆ (a ⋆ c)`) from Eq::congr(
+      (x: A) => alg!(`op, unit; inv(a) ⋆ x`),
+      h
+    )
+    = c from undo_left(op, unit, inv, g, a, c)
+  }
+}
+pub theorem cancel_right<A>(
+  op: (A, A) -> A,
+  unit: A,
+  inv: (A) -> A,
+  g: Group(A, op, unit, inv),
+  a: A,
+  b: A,
+  c: A,
+  h: alg!(`op, unit; b ⋆ a = c ⋆ a`)
+): b = c {
+  calc b {
+    = alg!(`op, unit; b ⋆ a ⋆ inv(a)`) from Eq::sym(undo_right(op, unit, inv, g, a, b))
+    = alg!(`op, unit; c ⋆ a ⋆ inv(a)`) from Eq::congr(
+      (x: A) => alg!(`op, unit; x ⋆ inv(a)`),
+      h
+    )
+    = c from undo_right(op, unit, inv, g, a, c)
+  }
+}
+pub theorem inverse_unique<A>(
+  op: (A, A) -> A,
+  unit: A,
+  inv: (A) -> A,
+  g: Group(A, op, unit, inv),
+  a: A,
+  b: A,
+  h: alg!(`op, unit; a ⋆ b = ε`)
+): b = inv(a) {
+  cancel_left(
+    op,
+    unit,
+    inv,
+    g,
+    a,
+    b,
+    inv(a),
+    calc alg!(`op, unit; a ⋆ b`) {
+      = alg!(`op, unit; ε`) from h
+      = alg!(`op, unit; a ⋆ inv(a)`) from Eq::sym(inverse_right(op, unit, inv, g, a))
+    }
+  )
+}
+pub theorem inverse_involution<A>(
+  op: (A, A) -> A,
+  unit: A,
+  inv: (A) -> A,
+  g: Group(A, op, unit, inv),
+  a: A
+): logic!(`inv(inv(a)) = a`) {
+  Eq::sym(inverse_unique(op, unit, inv, g, inv(a), a, inverse_left(op, unit, inv, g, a)))
+}
+pub theorem inverse_unit<A>(
+  op: (A, A) -> A,
+  unit: A,
+  inv: (A) -> A,
+  g: Group(A, op, unit, inv)
+): logic!(`inv(unit) = unit`) {
+  Eq::sym(
+    inverse_unique(
+      op,
+      unit,
+      inv,
+      g,
+      unit,
+      unit,
+      left_unit(op, unit, group_monoid(op, unit, inv, g), unit)
+    )
+  )
+}
+pub theorem inverse_product<A>(
+  op: (A, A) -> A,
+  unit: A,
+  inv: (A) -> A,
+  g: Group(A, op, unit, inv),
+  a: A,
+  b: A
+): alg!(`op, unit; inv(a ⋆ b) = inv(b) ⋆ inv(a)`) {
+  let m := group_monoid(op, unit, inv, g)
+  Eq::sym(
+    inverse_unique(
+      op,
+      unit,
+      inv,
+      g,
+      alg!(`op, unit; a ⋆ b`),
+      alg!(`op, unit; inv(b) ⋆ inv(a)`),
+      calc alg!(`op, unit; (a ⋆ b) ⋆ (inv(b) ⋆ inv(a))`) {
+        = alg!(`op, unit; a ⋆ b ⋆ inv(b) ⋆ inv(a)`) from Eq::sym(
+          assoc(op, unit, m, alg!(`op, unit; a ⋆ b`), inv(b), inv(a))
+        )
+        = alg!(`op, unit; a ⋆ inv(a)`) from Eq::congr(
+          (x: A) => alg!(`op, unit; x ⋆ inv(a)`),
+          undo_right(op, unit, inv, g, b, a)
+        )
+        = alg!(`op, unit; ε`) from inverse_right(op, unit, inv, g, a)
+      }
+    )
+  )
+}
+
+pub theorem solve_left<A>(
+  op: (A, A) -> A,
+  unit: A,
+  inv: (A) -> A,
+  g: Group(A, op, unit, inv),
+  a: A,
+  b: A
+): alg!(`op, unit; a ⋆ (inv(a) ⋆ b) = b`) {
+  let m := group_monoid(op, unit, inv, g)
+  calc alg!(`op, unit; a ⋆ (inv(a) ⋆ b)`) {
+    = alg!(`op, unit; a ⋆ inv(a) ⋆ b`) from Eq::sym(assoc(op, unit, m, a, inv(a), b))
+    = alg!(`op, unit; ε ⋆ b`) from Eq::congr(
+      (x: A) => alg!(`op, unit; x ⋆ b`),
+      inverse_right(op, unit, inv, g, a)
+    )
+    = b from left_unit(op, unit, m, b)
+  }
+}
+pub theorem solution_unique<A>(
+  op: (A, A) -> A,
+  unit: A,
+  inv: (A) -> A,
+  g: Group(A, op, unit, inv),
+  a: A,
+  b: A,
+  x: A,
+  h: alg!(`op, unit; a ⋆ x = b`)
+): alg!(`op, unit; x = inv(a) ⋆ b`) {
+  calc x {
+    = alg!(`op, unit; inv(a) ⋆ (a ⋆ x)`) from Eq::sym(undo_left(op, unit, inv, g, a, x))
+    = alg!(`op, unit; inv(a) ⋆ b`) from Eq::congr((v: A) => alg!(`op, unit; inv(a) ⋆ v`), h)
+  }
+}
