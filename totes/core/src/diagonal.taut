@@ -1,0 +1,28 @@
+import std::Base
+import "functions.taut"
+
+// Cantor's construction needs neither an infinite list nor a limit:
+// a sequence is a function, and its diagonal is another function.
+pub fn diagonal(rows: (Nat) -> (Nat) -> Bool): (Nat) -> Bool {
+  (n: Nat) => not(rows(n)(n))
+}
+
+pub theorem not_ne_self(b: Bool): ¬(not(b) = b) {
+  ⊢ ¬(not(b) = b) from match b {
+    false => true_ne_false
+    true => false_ne_true
+  }
+}
+
+// The n-th coordinate alone separates the diagonal from the n-th row.
+pub theorem diagonal_differs(rows: (Nat) -> (Nat) -> Bool, n: Nat): ¬(rows(n) = diagonal(rows)) {
+  (h: rows(n) = diagonal(rows)) => not_ne_self(
+    rows(n)(n)
+  )(Eq::sym(Eq::congr((s: (Nat) -> Bool) => s(n), h)))
+}
+
+pub theorem binary_sequences_uncountable(rows: (Nat) -> (Nat) -> Bool): ¬Surjective(rows) {
+  (onto: Surjective(rows)) => ⊢ False from match onto(diagonal(rows)) {
+    ImageOf(n, h) => diagonal_differs(rows, n, h)
+  }
+}

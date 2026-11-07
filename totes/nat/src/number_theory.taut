@@ -7,7 +7,7 @@ import "arithmetic.taut"
 import "divisibility.taut"
 
 pub theorem divides_sum(a: Nat, xs: List(Nat), h: AllDivisible(a, xs)): nat_rel!(`a | sum(xs)`) {
-  match h: nat_rel!(`a | sum(xs)`) {
+  ⊢ nat_rel!(`a | sum(xs)`) from match h {
     AllNil => divides_zero(a)
     AllCons(x, rest, hx, hr) => divides_add(a, x, sum(rest), hx, divides_sum(a, rest, hr))
   }

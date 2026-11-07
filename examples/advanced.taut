@@ -16,18 +16,18 @@ import nat::number_theory
 
 // A concrete group: Boolean addition modulo two, inverse = identity.
 fn xor(a: Bool, b: Bool): Bool {
-  match a: Bool {
+  ⊢ Bool from match a {
     false => b
-    true => match b: Bool { false => true
+    true => ⊢ Bool from match b { false => true
       true => false }
   }
 }
 theorem xor_assoc(a: Bool, b: Bool, c: Bool): alg!(`xor, false; a ⋆ b ⋆ c = a ⋆ (b ⋆ c)`) {
-  match a: alg!(`xor, false; a ⋆ b ⋆ c = a ⋆ (b ⋆ c)`) {
+  ⊢ alg!(`xor, false; a ⋆ b ⋆ c = a ⋆ (b ⋆ c)`) from match a {
     false => Refl
-    true => match b: alg!(`xor, false; true ⋆ b ⋆ c = true ⋆ (b ⋆ c)`) {
+    true => ⊢ alg!(`xor, false; true ⋆ b ⋆ c = true ⋆ (b ⋆ c)`) from match b {
       false => Refl
-      true => match c: alg!(`xor, false; true ⋆ true ⋆ c = true ⋆ (true ⋆ c)`) {
+      true => ⊢ alg!(`xor, false; true ⋆ true ⋆ c = true ⋆ (true ⋆ c)`) from match c {
         false => Refl
         true => Refl
       }
@@ -35,11 +35,11 @@ theorem xor_assoc(a: Bool, b: Bool, c: Bool): alg!(`xor, false; a ⋆ b ⋆ c = 
   }
 }
 theorem xor_right_unit(a: Bool): alg!(`xor, false; a ⋆ false = a`) {
-  match a: alg!(`xor, false; a ⋆ false = a`) { false => Refl
+  ⊢ alg!(`xor, false; a ⋆ false = a`) from match a { false => Refl
     true => Refl }
 }
 theorem xor_inverse(a: Bool): alg!(`xor, false; a ⋆ a = false`) {
-  match a: alg!(`xor, false; a ⋆ a = false`) { false => Refl
+  ⊢ alg!(`xor, false; a ⋆ a = false`) from match a { false => Refl
     true => Refl }
 }
 theorem boolean_group(): Group(Bool, xor, false, (a: Bool) => a) {

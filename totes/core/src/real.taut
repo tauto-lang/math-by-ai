@@ -1,0 +1,201 @@
+import std::Base
+import std::Rat
+import std::RatLaws
+import "rational_order.taut"
+
+// A real number is an inhabited, proper, downward closed rational cut
+// with no greatest element. Arithmetic on reals is not needed below.
+pub(open) inductive Real: Type {
+  Dedekind(
+    lower: (Rat) -> Prop,
+    inhabited: ∃ q: Rat. lower(q),
+    proper: ∃ q: Rat. ¬lower(q),
+    downward: (p: Rat, q: Rat, lt: RationalLt(p, q), h: lower(q)) -> lower(p),
+    rounded: (p: Rat, h: lower(p)) -> (∃ q: Rat. RationalLt(p, q) ∧ lower(q))
+  ): Real
+}
+
+pub fn below(x: Real, q: Rat): Prop {
+  ⊢ Prop from match x { Dedekind(lower, inhabited, proper, downward, rounded) => lower(q) }
+}
+
+pub theorem real_inhabited(x: Real): ∃ q: Rat. below(x, q) {
+  ⊢ ∃ q: Rat. below(x, q) from match x {
+    Dedekind(lower, inhabited, proper, downward, rounded) => inhabited
+  }
+}
+
+pub theorem real_proper(x: Real): ∃ q: Rat. ¬below(x, q) {
+  ⊢ ∃ q: Rat. ¬below(x, q) from match x {
+    Dedekind(lower, inhabited, proper, downward, rounded) => proper
+  }
+}
+
+pub theorem real_downward(
+  x: Real,
+  p: Rat,
+  q: Rat,
+  lt: RationalLt(p, q),
+  h: below(x, q)
+): below(x, p) {
+  ⊢ below(x, p) from match x {
+    Dedekind(lower, inhabited, proper, downward, rounded) => downward(p, q, lt, h)
+  }
+}
+
+pub theorem real_rounded(
+  x: Real,
+  p: Rat,
+  h: below(x, p)
+): ∃ q: Rat. RationalLt(p, q) ∧ below(x, q) {
+  ⊢ ∃ q: Rat. RationalLt(p, q) ∧ below(x, q) from match x {
+    Dedekind(lower, inhabited, proper, downward, rounded) => rounded(p, h)
+  }
+}
+
+// A cut depends on the rational number, not on the chosen fraction.
+pub theorem real_respects_rationals(
+  x: Real,
+  p: Rat,
+  q: Rat,
+  equal: Rat::equiv(p, q),
+  h: below(x, p)
+): below(x, q) {
+  ⊢ below(x, q) from match real_rounded(x, p, h) {
+    ExIntro(r, pair) => ⊢ below(x, q) from match pair {
+      AndIntro(pr, member) => real_downward(
+        x,
+        q,
+        r,
+        (rq: RatLe(r, q)) => pr(Rat::le_congr(r, q, p, Rat::equiv_symm(p, q, equal), rq)),
+        member
+      )
+    }
+  }
+}
+
+// Equality of real VALUES is equality of their cuts, not their proof fields.
+pub fn RealLe(x: Real, y: Real): Prop { (q: Rat, h: below(x, q)) -> below(y, q) }
+pub fn SameReal(x: Real, y: Real): Prop { RealLe(x, y) ∧ RealLe(y, x) }
+
+pub theorem same_real_refl(x: Real): SameReal(x, x) {
+  AndIntro((q: Rat, h: below(x, q)) => h, (q: Rat, h: below(x, q)) => h)
+}
+
+pub theorem same_real_symm(x: Real, y: Real, h: SameReal(x, y)): SameReal(y, x) {
+  ⊢ SameReal(y, x) from match h { AndIntro(xy, yx) => AndIntro(yx, xy) }
+}
+
+pub theorem same_real_trans(
+  x: Real,
+  y: Real,
+  z: Real,
+  h: SameReal(x, y),
+  k: SameReal(y, z)
+): SameReal(x, z) {
+  ⊢ SameReal(x, z) from match h {
+    AndIntro(xy, yx) => ⊢ SameReal(x, z) from match k {
+      AndIntro(yz, zy) => AndIntro(
+        (q: Rat, member: below(x, q)) => yz(q, xy(q, member)),
+        (q: Rat, member: below(z, q)) => yx(q, zy(q, member))
+      )
+    }
+  }
+}
+
+// The union of a nonempty family of cuts bounded above is its supremum.
+pub fn supremum_lower<I>(family: (I) -> Real, q: Rat): Prop {
+  ∃ i: I. below(family(i), q)
+}
+
+pub theorem supremum_inhabited<I>(family: (I) -> Real, i: I): ∃ q: Rat. supremum_lower(family, q) {
+  ⊢ ∃ q: Rat. supremum_lower(family, q) from match real_inhabited(family(i)) {
+    ExIntro(q, h) => ExIntro(q, ExIntro(i, h))
+  }
+}
+
+pub theorem supremum_proper<I>(
+  family: (I) -> Real,
+  upper: Real,
+  bound: (i: I) -> RealLe(family(i), upper)
+): ∃ q: Rat. ¬supremum_lower(family, q) {
+  ⊢ ∃ q: Rat. ¬supremum_lower(family, q) from match real_proper(upper) {
+    ExIntro(q, outside) => ExIntro(q, (member: supremum_lower(family, q)) => ⊢ False from match member {
+      ExIntro(i, h) => outside(bound(i, q, h))
+    })
+  }
+}
+
+pub theorem supremum_downward<I>(
+  family: (I) -> Real,
+  p: Rat,
+  q: Rat,
+  lt: RationalLt(p, q),
+  h: supremum_lower(family, q)
+): supremum_lower(family, p) {
+  ⊢ supremum_lower(family, p) from match h {
+    ExIntro(i, member) => ExIntro(i, real_downward(family(i), p, q, lt, member))
+  }
+}
+
+pub theorem supremum_rounded<I>(
+  family: (I) -> Real,
+  p: Rat,
+  h: supremum_lower(family, p)
+): ∃ q: Rat. RationalLt(p, q) ∧ supremum_lower(family, q) {
+  ⊢ ∃ q: Rat. RationalLt(p, q) ∧ supremum_lower(family, q) from match h {
+    ExIntro(i, member) => ⊢ ∃ q: Rat. RationalLt(p, q) ∧ supremum_lower(family, q) from match real_rounded(
+      family(i),
+      p,
+      member
+    ) {
+      ExIntro(q, pair) => ⊢ ∃ q: Rat. RationalLt(p, q) ∧ supremum_lower(family, q) from match pair {
+        AndIntro(lt, in_cut) => ExIntro(q, AndIntro(lt, ExIntro(i, in_cut)))
+      }
+    }
+  }
+}
+
+pub fn supremum<I>(
+  family: (I) -> Real,
+  i: I,
+  upper: Real,
+  bound: (j: I) -> RealLe(family(j), upper)
+): Real {
+  Dedekind(
+    (q: Rat) => supremum_lower(family, q),
+    supremum_inhabited(family, i),
+    supremum_proper(family, upper, bound),
+    (p: Rat, q: Rat, lt: RationalLt(p, q), h: supremum_lower(family, q)) => supremum_downward(
+      family,
+      p,
+      q,
+      lt,
+      h
+    ),
+    (p: Rat, h: supremum_lower(family, p)) => supremum_rounded(family, p, h)
+  )
+}
+
+pub theorem supremum_upper<I>(
+  family: (I) -> Real,
+  i: I,
+  upper: Real,
+  bound: (j: I) -> RealLe(family(j), upper),
+  j: I
+): RealLe(family(j), supremum(family, i, upper, bound)) {
+  (q: Rat, h: below(family(j), q)) => ExIntro(j, h)
+}
+
+pub theorem supremum_least<I>(
+  family: (I) -> Real,
+  i: I,
+  upper: Real,
+  bound: (j: I) -> RealLe(family(j), upper),
+  candidate: Real,
+  h: (j: I) -> RealLe(family(j), candidate)
+): RealLe(supremum(family, i, upper, bound), candidate) {
+  (q: Rat, member: supremum_lower(family, q)) => ⊢ below(candidate, q) from match member {
+    ExIntro(j, in_cut) => h(j, q, in_cut)
+  }
+}

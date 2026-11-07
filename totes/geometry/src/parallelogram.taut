@@ -1,0 +1,207 @@
+import std::Base
+import algebra::ring
+import algebra::ring_norm
+import algebra::ring_notation { ring }
+import algebra::ring_tactic { ring_norm }
+import "point.taut"
+import "notation.taut" { geo }
+
+// The key identity of the parallelogram, one coordinate at a time. With
+// u = B - A, v = D - A and e = (C - D) - u, which is also (C - B) - v:
+//
+//   e * (u × v) = (u × (C - D)) * v - (v × (C - B)) * u
+//
+// so when AB ∥ DC and AD ∥ BC the right side is 0, and e is 0 when u × v is not.
+pub theorem parallelogram_key_x<K>(
+  add: (K, K) -> K,
+  zero: K,
+  neg: (K) -> K,
+  mul: (K, K) -> K,
+  one: K,
+  r: CommRing(K, add, zero, neg, mul, one),
+  A: Point(K),
+  B: Point(K),
+  C: Point(K),
+  D: Point(K)
+): ring!(```
+    add, zero, neg, mul, one;
+    ((px(C) - px(D)) - (px(B) - px(A))) * ((px(B) - px(A)) * (py(D) - py(A)) - (py(B) - py(A)) * (px(D) - px(A)))
+    = ((px(B) - px(A)) * (py(C) - py(D)) - (py(B) - py(A)) * (px(C) - px(D))) * (px(D) - px(A))
+    - ((px(D) - px(A)) * (py(C) - py(B)) - (py(D) - py(A)) * (px(C) - px(B))) * (px(B) - px(A))
+  ```) {
+  by ring_norm!(r): ring!(```
+    add, zero, neg, mul, one;
+      ((px(C) - px(D)) - (px(B) - px(A))) * ((px(B) - px(A)) * (py(D) - py(A)) - (py(B) - py(A)) * (px(D) - px(A)))
+      = ((px(B) - px(A)) * (py(C) - py(D)) - (py(B) - py(A)) * (px(C) - px(D))) * (px(D) - px(A))
+      - ((px(D) - px(A)) * (py(C) - py(B)) - (py(D) - py(A)) * (px(C) - px(B))) * (px(B) - px(A))
+    ```) {}
+}
+
+pub theorem parallelogram_key_y<K>(
+  add: (K, K) -> K,
+  zero: K,
+  neg: (K) -> K,
+  mul: (K, K) -> K,
+  one: K,
+  r: CommRing(K, add, zero, neg, mul, one),
+  A: Point(K),
+  B: Point(K),
+  C: Point(K),
+  D: Point(K)
+): ring!(```
+    add, zero, neg, mul, one;
+    ((py(C) - py(D)) - (py(B) - py(A))) * ((px(B) - px(A)) * (py(D) - py(A)) - (py(B) - py(A)) * (px(D) - px(A)))
+    = ((px(B) - px(A)) * (py(C) - py(D)) - (py(B) - py(A)) * (px(C) - px(D))) * (py(D) - py(A))
+    - ((px(D) - px(A)) * (py(C) - py(B)) - (py(D) - py(A)) * (px(C) - px(B))) * (py(B) - py(A))
+  ```) {
+  by ring_norm!(r): ring!(```
+    add, zero, neg, mul, one;
+      ((py(C) - py(D)) - (py(B) - py(A))) * ((px(B) - px(A)) * (py(D) - py(A)) - (py(B) - py(A)) * (px(D) - px(A)))
+      = ((px(B) - px(A)) * (py(C) - py(D)) - (py(B) - py(A)) * (px(C) - px(D))) * (py(D) - py(A))
+      - ((px(D) - px(A)) * (py(C) - py(B)) - (py(D) - py(A)) * (px(C) - px(B))) * (py(B) - py(A))
+    ```) {}
+}
+
+// `x = 0` and `y = 0` make `x a - y b = 0`; so `e k = x a - y b` with `k ≠ 0` makes `e = 0`.
+pub theorem cancel_combination<K, e: K, k: K, x: K, y: K, a: K, b: K>(
+  add: (K, K) -> K,
+  zero: K,
+  neg: (K) -> K,
+  mul: (K, K) -> K,
+  one: K,
+  d: IntegralDomain(K, add, zero, neg, mul, one),
+  nonzero: (k = zero) -> False,
+  key: mul(e, k) = add(mul(x, a), neg(mul(y, b))),
+  hx: x = zero,
+  hy: y = zero
+): e = zero {
+  let r := domain_ring(add, zero, neg, mul, one, d)
+  domain_cancel(
+    add,
+    zero,
+    neg,
+    mul,
+    one,
+    d,
+    e,
+    zero,
+    k,
+    nonzero,
+    Eq::trans(
+      key,
+      Eq::trans(
+        Eq::congr((z: K) => add(mul(z, a), neg(mul(y, b))), hx),
+        Eq::trans(
+          Eq::congr((z: K) => add(mul(zero, a), neg(mul(z, b))), hy),
+          by ring_norm!(r): add(mul(zero, a), neg(mul(zero, b))) = mul(zero, k) {}
+        )
+      )
+    )
+  )
+}
+
+// `(c - b) - (d - a) = (c - d) - (b - a)`: the same difference of the sides.
+pub theorem swap_differences<K>(
+  add: (K, K) -> K,
+  zero: K,
+  neg: (K) -> K,
+  mul: (K, K) -> K,
+  one: K,
+  r: CommRing(K, add, zero, neg, mul, one),
+  a: K,
+  b: K,
+  c: K,
+  dd: K
+): ring!(`add, zero, neg, mul, one; (c - b) - (dd - a) = (c - dd) - (b - a)`) {
+  by ring_norm!(r): ring!(`add, zero, neg, mul, one; (c - b) - (dd - a) = (c - dd) - (b - a)`) {}
+}
+
+pub theorem eq_of_difference<K, a: K, b: K>(
+  add: (K, K) -> K,
+  zero: K,
+  neg: (K) -> K,
+  mul: (K, K) -> K,
+  one: K,
+  r: CommRing(K, add, zero, neg, mul, one),
+  h: add(a, neg(b)) = zero
+): a = b {
+  ring_eq_of_sub(add, zero, neg, mul, one, r, a, b, h)
+}
+
+// Two vectors with the same coordinates have the same squared length.
+pub theorem same_length<K, p1: K, p2: K, u1: K, u2: K>(
+  add: (K, K) -> K,
+  mul: (K, K) -> K,
+  h1: p1 = u1,
+  h2: p2 = u2
+): add(mul(u1, u1), mul(u2, u2)) = add(mul(p1, p1), mul(p2, p2)) {
+  Eq::sym(
+    Eq::trans(
+      Eq::congr((z: K) => add(mul(z, z), mul(p2, p2)), h1),
+      Eq::congr((z: K) => add(mul(u1, u1), mul(z, z)), h2)
+    )
+  )
+}
+
+// A quadrilateral ABCD with AB ∥ DC and AD ∥ BC, where A, B, D are not on a
+// line, has its opposite sides of the same length: a parallelogram. In the
+// plane over any integral domain; lengths are squared, as a ring has no roots.
+pub theorem parallelogram_opposite_sides<K>(
+  add: (K, K) -> K,
+  zero: K,
+  neg: (K) -> K,
+  mul: (K, K) -> K,
+  one: K,
+  d: IntegralDomain(K, add, zero, neg, mul, one),
+  A: Point(K),
+  B: Point(K),
+  C: Point(K),
+  D: Point(K),
+  ab_dc: geo!(`add, zero, neg, mul, one; AB ∥ DC`),
+  ad_bc: geo!(`add, zero, neg, mul, one; AD ∥ BC`),
+  proper: geo!(`add, zero, neg, mul, one; ¬(AB ∥ AD)`)
+): geo!(`add, zero, neg, mul, one; AB ≅ DC ∧ AD ≅ BC`) {
+  let r := domain_ring(add, zero, neg, mul, one, d)
+  // (C - D) - (B - A) = 0, each coordinate.
+  let ex := cancel_combination(
+    add,
+    zero,
+    neg,
+    mul,
+    one,
+    d,
+    proper,
+    parallelogram_key_x(add, zero, neg, mul, one, r, A, B, C, D),
+    ab_dc,
+    ad_bc
+  )
+  let ey := cancel_combination(
+    add,
+    zero,
+    neg,
+    mul,
+    one,
+    d,
+    proper,
+    parallelogram_key_y(add, zero, neg, mul, one, r, A, B, C, D),
+    ab_dc,
+    ad_bc
+  )
+  // So also (C - B) - (D - A) = 0.
+  let fx := Eq::trans(swap_differences(add, zero, neg, mul, one, r, px(A), px(B), px(C), px(D)), ex)
+  let fy := Eq::trans(swap_differences(add, zero, neg, mul, one, r, py(A), py(B), py(C), py(D)), ey)
+  AndIntro(
+    same_length(
+      add,
+      mul,
+      eq_of_difference(add, zero, neg, mul, one, r, ex),
+      eq_of_difference(add, zero, neg, mul, one, r, ey)
+    ),
+    same_length(
+      add,
+      mul,
+      eq_of_difference(add, zero, neg, mul, one, r, fx),
+      eq_of_difference(add, zero, neg, mul, one, r, fy)
+    )
+  )
+}

@@ -1,3 +1,4 @@
+import std::Calc { calc }
 import std::Base
 import std::Nat
 import std::NatDiv
@@ -14,7 +15,7 @@ pub theorem divides_remainder_zero(
   k: Nat,
   h: nat_rel!(`Succ(k) | n`)
 ): nat!(`Nat::rem_nz(n, Succ(k), Nat::succ_ne_zero(k)) = 0`) {
-  match h: nat!(`Nat::rem_nz(n, Succ(k), Nat::succ_ne_zero(k)) = 0`) {
+  ⊢ nat!(`Nat::rem_nz(n, Succ(k), Nat::succ_ne_zero(k)) = 0`) from match h {
     By(q, eq) => Eq::subst(
       (x: Nat) => nat!(`Nat::rem_nz(x, Succ(k), Nat::succ_ne_zero(k)) = 0`),
       eq,
@@ -22,12 +23,11 @@ pub theorem divides_remainder_zero(
     )
   }
 }
-pub fn bool_neg(b: Bool): Bool { match b: Bool { false => true
-    true => false } }
+pub fn bool_neg(b: Bool): Bool { ⊢ Bool from match b { false => true, true => false } }
 pub fn divisor_test(n: Nat, d: Nat): Bool {
-  match d: Bool {
+  ⊢ Bool from match d {
     Zero => true
-    Succ(k) => match k: Bool {
+    Succ(k) => ⊢ Bool from match k {
       Zero => true
       Succ(j) => Bool::or(
         Nat::eq(d, n),
@@ -37,7 +37,7 @@ pub fn divisor_test(n: Nat, d: Nat): Bool {
   }
 }
 pub fn trial(n: Nat, bound: Nat): Bool {
-  match bound: Bool {
+  ⊢ Bool from match bound {
     Zero => true
     Succ(k) => Bool::and(trial(n, k), divisor_test(n, Succ(k)))
   }
@@ -45,7 +45,7 @@ pub fn trial(n: Nat, bound: Nat): Bool {
 pub fn is_prime(n: Nat): Bool { Bool::and(Nat::lt(1, n), trial(n, n)) }
 
 pub theorem boolean_cases(b: Bool): logic!(`b = false ∨ b = true`) {
-  match b: logic!(`b = false ∨ b = true`) { false => OrInl(Refl)
+  ⊢ logic!(`b = false ∨ b = true`) from match b { false => OrInl(Refl)
     true => OrInr(Refl) }
 }
 theorem divisor_test_with_rem(
@@ -72,7 +72,7 @@ pub theorem divisor_test_sound(
   good: divisor_test(n, d) = true,
   divides: nat_rel!(`d | n`)
 ): logic!(`d = 1 ∨ d = n`) {
-  match d: logic!(`d = 1 ∨ d = n`) {
+  ⊢ logic!(`d = 1 ∨ d = n`) from match d {
     Zero => False::elim(
       false_ne_true(
         Eq::trans(
@@ -81,7 +81,7 @@ pub theorem divisor_test_sound(
         )
       )
     )
-    Succ(k) => match k: logic!(`Succ(k) = 1 ∨ Succ(k) = n`) {
+    Succ(k) => ⊢ logic!(`Succ(k) = 1 ∨ Succ(k) = n`) from match k {
       Zero => OrInl(Refl)
       Succ(j) => Or::elim(
         boolean_cases(Nat::eq(Succ(Succ(j)), n)),
@@ -107,8 +107,8 @@ theorem range_sound(
   le: nat!(`d ≤ bound`),
   divides: nat_rel!(`d | n`)
 ): logic!(`d = 1 ∨ d = n`) {
-  match bound: logic!(`d = 1 ∨ d = n`) {
-    Zero => match d: logic!(`d = 1 ∨ d = n`) {
+  ⊢ logic!(`d = 1 ∨ d = n`) from match bound {
+    Zero => ⊢ logic!(`d = 1 ∨ d = n`) from match d {
       Zero => divisor_test_sound(n, 0, pos, Refl, divides)
       Succ(k) => False::elim(false_ne_true(Eq::trans(Eq::sym(Nat::lt_zero_false(k)), le)))
     }
@@ -142,14 +142,14 @@ pub theorem is_prime_sound(n: Nat, good: is_prime(n) = true): Prime(n) {
     (d: Nat, h: nat_rel!(`d | n`)) => range_sound(n, n,
       Bool::and_true_left(Nat::lt(1, n), trial(n, n), good),
       Bool::and_true_right(Nat::lt(1, n), trial(n, n), good), d,
-      match n: nat!(`d ≤ n`) {
+      ⊢ nat!(`d ≤ n`) from match n {
         Zero => False::elim(false_ne_true(Bool::and_true_left(Nat::lt(1, 0), trial(0, 0), good)))
         Succ(k) => divides_bound(d, k, h)
       }, h))
 }
 
 pub fn find_factor(n: Nat, bound: Nat): Nat {
-  match bound: Nat {
+  ⊢ Nat from match bound {
     Zero => 0
     Succ(k) => if divisor_test(n, Succ(k)) { find_factor(n, k) } else { Succ(k) }
   }
@@ -163,7 +163,7 @@ pub theorem candidate_bad(
   d: Nat,
   h: BadCandidate(n, bound, d)
 ): divisor_test(n, d) = false {
-  match h: divisor_test(n, d) = false { Candidate(bad, within) => bad }
+  ⊢ divisor_test(n, d) = false from match h { Candidate(bad, within) => bad }
 }
 pub theorem candidate_bound(
   n: Nat,
@@ -171,18 +171,18 @@ pub theorem candidate_bound(
   d: Nat,
   h: BadCandidate(n, bound, d)
 ): nat!(`d ≤ bound`) {
-  match h: nat!(`d ≤ bound`) { Candidate(bad, within) => within }
+  ⊢ nat!(`d ≤ bound`) from match h { Candidate(bad, within) => within }
 }
 theorem and_true_identity(a: Bool): Bool::and(a, true) = a {
-  match a: Bool::and(a, true) = a { false => Refl
-    true => Refl }
+  ⊢ Bool::and(a, true) = a from match a { false => Refl, true => Refl }
 }
 theorem and_with_true(a: Bool, b: Bool, hb: b = true, h: Bool::and(a, b) = false): a = false {
-  calc a {
-    = Bool::and(a, true) from Eq::sym(and_true_identity(a))
-    = Bool::and(a, b) from Eq::sym(Eq::congr((x: Bool) => Bool::and(a, x), hb))
-    = false from h
-  }
+  calc!(```
+    $a
+    = $Bool::and(a, true) from $Eq::sym(and_true_identity(a))
+    = $Bool::and(a, b) from $Eq::sym(Eq::congr((x: Bool) => Bool::and(a, x), hb))
+    = $false from $h
+    ```)
 }
 theorem find_true(
   n: Nat,
@@ -203,7 +203,7 @@ pub theorem find_factor_correct(
   bound: Nat,
   bad: trial(n, bound) = false
 ): BadCandidate(n, bound, find_factor(n, bound)) {
-  match bound: BadCandidate(n, bound, find_factor(n, bound)) {
+  ⊢ BadCandidate(n, bound, find_factor(n, bound)) from match bound {
     Zero => False::elim(true_ne_false(bad))
     Succ(k) => Or::elim(
       boolean_cases(divisor_test(n, Succ(k))),

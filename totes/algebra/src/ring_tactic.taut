@@ -1,0 +1,166 @@
+import std::Base
+import std::prelude::Macro { Judgement, ProofStep, Syn, SynExpr, SynSpan, Elab, elab, macro_error }
+import std::Rewrite { Tac }
+import "ring_norm.taut"
+
+// The operations of a ring, as the checker writes them.
+pub(open) struct RingOps { add: SynExpr, zero: SynExpr, neg: SynExpr, mul: SynExpr, one: SynExpr }
+
+module RingTac {
+  // Where `e` is among the variables met so far.
+  pub fn index(vars: List(SynExpr), e: SynExpr, i: u64): Option(u64) ! {Div} {
+    match vars {
+      Nil => None
+      Cons(v, rest) => if Syn::same(v, e) { Some(i) } else { RingTac::index(rest, e, i + 1) }
+    }
+  }
+
+  pub fn length(vars: List(SynExpr)): u64 ! {Div} {
+    match vars {
+      Nil => 0
+      Cons(_, rest) => 1 + RingTac::length(rest)
+    }
+  }
+
+  pub fn snoc(vars: List(SynExpr), e: SynExpr): List(SynExpr) ! {Div} {
+    match vars {
+      Nil => Cons(e, Nil)
+      Cons(v, rest) => Cons(v, RingTac::snoc(rest, e))
+    }
+  }
+
+  // `e` as a variable: its place, after the ones met so far when it is new.
+  pub fn variable(e: SynExpr, vars: List(SynExpr), at: SynSpan): SynExpr × List(SynExpr) ! {Div} {
+    match RingTac::index(vars, e, 0) {
+      Some(i) => {
+        let k := ExNat(Text::of_u64(i), at)
+        #(quote { ReVar($k) }, vars)
+      }
+      None => {
+        let k := ExNat(Text::of_u64(RingTac::length(vars)), at)
+        #(quote { ReVar($k) }, RingTac::snoc(vars, e))
+      }
+    }
+  }
+
+  pub fn two(
+    ops: RingOps,
+    c: SynExpr,
+    a: SynExpr,
+    b: SynExpr,
+    vars: List(SynExpr),
+    at: SynSpan
+  ): SynExpr × List(SynExpr) ! {Div} {
+    let x := RingTac::read(ops, a, vars, at)
+    let y := RingTac::read(ops, b, (x: List(SynExpr)), at)
+    let u := (x: SynExpr)
+    let v := (y: SynExpr)
+    #(quote { $c($u, $v) }, (y: List(SynExpr)))
+  }
+
+  // The `RingExpr` of `e`: the ring's operations and constants, and anything
+  // else a variable.
+  pub fn read(
+    ops: RingOps,
+    e: SynExpr,
+    vars: List(SynExpr),
+    at: SynSpan
+  ): SynExpr × List(SynExpr) ! {Div} {
+    if Syn::same(e, ops.zero) {
+      #(quote { ReZero }, vars)
+    } else if Syn::same(e, ops.one) {
+      #(quote { ReOne }, vars)
+    } else {
+      match Syn::app_parts(e) {
+        None => RingTac::variable(e, vars, at)
+        Some(p) => {
+          let f := (p: SynExpr)
+          match (p: List(SynExpr)) {
+            Nil => RingTac::variable(e, vars, at)
+            Cons(a, rest) => match rest {
+              Nil => if Syn::same(f, ops.neg) {
+                let x := RingTac::read(ops, a, vars, at)
+                let u := (x: SynExpr)
+                #(quote { ReNeg($u) }, (x: List(SynExpr)))
+              } else {
+                RingTac::variable(e, vars, at)
+              }
+              Cons(b, more) => match more {
+                Nil => if Syn::same(f, ops.add) {
+                  RingTac::two(ops, quote { ReAdd }, a, b, vars, at)
+                } else if Syn::same(f, ops.mul) {
+                  RingTac::two(ops, quote { ReMul }, a, b, vars, at)
+                } else {
+                  RingTac::variable(e, vars, at)
+                }
+                Cons(_, _) => RingTac::variable(e, vars, at)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  pub fn list(vars: List(SynExpr)): SynExpr ! {Div} {
+    match vars {
+      Nil => quote { Nil }
+      Cons(v, rest) => {
+        let tail := RingTac::list(rest)
+        quote { Cons($v, $tail) }
+      }
+    }
+  }
+
+  // The operations from the type of the proof that the structure is a ring,
+  // `CommRing(A, add, zero, neg, mul, one)`.
+  pub fn ops(ty: SynExpr): Option(RingOps) {
+    match Syn::app_parts(ty) {
+      None => None
+      Some(p) => match (p: List(SynExpr)) {
+        Cons(_, Cons(add, Cons(zero, Cons(neg, Cons(mul, Cons(one, Nil)))))) => Some(
+          RingOps { add: add, zero: zero, neg: neg, mul: mul, one: one }
+        )
+        _ => None
+      }
+    }
+  }
+}
+
+// `ring_norm!(r)`, for a goal `l = r` in a commutative ring: `r` proves
+// `CommRing(A, add, zero, neg, mul, one)`, and the sides are made of those
+// operations and anything else (a variable of the equation). Reflection: the
+// term is `ring_norm_eq(…, Refl)`, whose `Refl` the kernel accepts only when
+// `l + -r` normalises to no term. No goal is left: write no arm.
+pub macro fn ring_norm(s: ProofStep): SynExpr ! {macro_error, elab, Div} {
+  match s.after {
+    Cons(_, _) => Syn::error(s.span, "ring_norm! leaves no goal: write no arm")
+    Nil => match Elab::check(s.arg, s.before, None) {
+      Err(d) => Syn::error(s.span, d.message)
+      Ok(j) => match RingTac::ops(Judgement::term(Judgement::type_of(j))) {
+        None => Syn::error(
+          s.span,
+          "ring_norm!: the argument does not prove CommRing(A, add, zero, neg, mul, one)"
+        )
+        Some(ops) => match Tac::eq_goal(s.before) {
+          None => Syn::error(s.span, "ring_norm!: the goal is not an equation")
+          Some(#(@lhs l, @rhs r, @ty ty)) => {
+            let at := s.span
+            let x := RingTac::read(ops, l, Nil, at)
+            let y := RingTac::read(ops, r, (x: List(SynExpr)), at)
+            let env := RingTac::list((y: List(SynExpr)))
+            let a := (x: SynExpr)
+            let b := (y: SynExpr)
+            let add := ops.add
+            let zero := ops.zero
+            let neg := ops.neg
+            let mul := ops.mul
+            let one := ops.one
+            let proof := s.arg
+            quote { ring_norm_eq($add, $zero, $neg, $mul, $one, $proof, $env, $a, $b, Refl) }
+          }
+        }
+      }
+    }
+  }
+}

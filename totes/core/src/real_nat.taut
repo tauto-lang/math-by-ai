@@ -1,0 +1,119 @@
+import std::Base
+import std::Nat
+import std::Rat
+import std::RatLaws
+import std::Int
+import std::IntLaws
+import std::IntOrder
+import "functions.taut"
+import "rational_order.taut"
+import "real.taut"
+
+pub theorem negative_one_lt_nat(n: Nat): RationalLt(Rat::of_int(IntNegSucc(0)), Rat::of_nat(n)) {
+  (bad: RatLe(Rat::of_nat(n), Rat::of_int(IntNegSucc(0)))) => false_ne_true(
+    Int::le_rw(
+      Int::mul(IntOfNat(n), 1),
+      IntOfNat(n),
+      Int::mul(IntNegSucc(0), 1),
+      IntNegSucc(0),
+      Int::mul_one(IntOfNat(n)),
+      Int::mul_one(IntNegSucc(0)),
+      bad
+    )
+  )
+}
+
+pub fn natural_real(n: Nat): Real {
+  Dedekind(
+    (q: Rat) => RationalLt(q, Rat::of_nat(n)),
+    ExIntro(Rat::of_int(IntNegSucc(0)), negative_one_lt_nat(n)),
+    ExIntro(Rat::of_nat(n), rational_lt_irrefl(Rat::of_nat(n))),
+    (p: Rat, q: Rat, pq: RationalLt(p, q), qn: RationalLt(q, Rat::of_nat(n))) => rational_lt_trans(
+      p,
+      q,
+      Rat::of_nat(n),
+      pq,
+      qn
+    ),
+    (p: Rat, pn: RationalLt(p, Rat::of_nat(n))) => ExIntro(
+      rational_between(p, Rat::of_nat(n)),
+      AndIntro(
+        rational_between_left(p, Rat::of_nat(n), pn),
+        rational_between_right(p, Rat::of_nat(n), pn)
+      )
+    )
+  )
+}
+
+// An inclusion of the two cuts implies the corresponding rational inequality.
+pub theorem natural_real_le(
+  n: Nat,
+  m: Nat,
+  h: RealLe(natural_real(n), natural_real(m))
+): RatLe(Rat::of_nat(n), Rat::of_nat(m)) {
+  ⊢ RatLe(Rat::of_nat(n), Rat::of_nat(m)) from match Int::le(IntOfNat(n), IntOfNat(m)) eqn comparison {
+    true => Int::le_rw(
+      IntOfNat(n),
+      Int::mul(IntOfNat(n), 1),
+      IntOfNat(m),
+      Int::mul(IntOfNat(m), 1),
+      Eq::sym(Int::mul_one(IntOfNat(n))),
+      Eq::sym(Int::mul_one(IntOfNat(m))),
+      comparison
+    )
+    false => False::elim(
+      rational_lt_irrefl(
+        Rat::of_nat(m),
+        h(
+          Rat::of_nat(m),
+          (bad: RatLe(Rat::of_nat(n), Rat::of_nat(m))) => false_ne_true(
+            Eq::trans(
+              Eq::sym(comparison),
+              Int::le_rw(
+                Int::mul(IntOfNat(n), 1),
+                IntOfNat(n),
+                Int::mul(IntOfNat(m), 1),
+                IntOfNat(m),
+                Int::mul_one(IntOfNat(n)),
+                Int::mul_one(IntOfNat(m)),
+                bad
+              )
+            )
+          )
+        )
+      )
+    )
+  }
+}
+
+pub theorem natural_real_injective(
+  n: Nat,
+  m: Nat,
+  same: SameReal(natural_real(n), natural_real(m))
+): n = m {
+  ⊢ n = m from match same {
+    AndIntro(nm, mn) => Eq::congr(
+      Int::abs_nat,
+      Eq::trans(
+        Eq::sym(Int::mul_one(IntOfNat(n))),
+        Eq::trans(
+          Rat::le_antisymm(
+            Rat::of_nat(n),
+            Rat::of_nat(m),
+            natural_real_le(n, m, nm),
+            natural_real_le(m, n, mn)
+          ),
+          Int::mul_one(IntOfNat(m))
+        )
+      )
+    )
+  }
+}
+
+pub theorem natural_real_function_injective(): Injective(natural_real) {
+  (n: Nat, m: Nat, h: natural_real(n) = natural_real(m)) => natural_real_injective(
+    n,
+    m,
+    Eq::subst((x: Real) => SameReal(natural_real(n), x), h, same_real_refl(natural_real(n)))
+  )
+}

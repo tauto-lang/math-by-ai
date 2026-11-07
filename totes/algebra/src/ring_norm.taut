@@ -1,0 +1,1141 @@
+import std::Base
+import std::NatNorm { Nm }
+import "monoid.taut"
+import "commutative.taut"
+import "group.taut"
+import "ring.taut"
+
+// Reflection for the equations of a commutative ring. An expression of `add`,
+// `neg`, `mul`, `zero`, `one` and variables is read as a `RingExpr`, and its
+// normal form is a list of signed monomials (`RingTerm`), each a sorted list of
+// variables (`Nm::ins`, `Nm::mul`, as for `nat_norm!`). The list is sorted by
+// monomial (`Nm::cmp`), and a term put in next to the same monomial with the
+// other sign cancels it, so the terms of one monomial all have the same sign:
+// the normal form is the polynomial with integer coefficients, written out.
+// `l = r` holds when `l + -r` has no term (`ring_norm_eq`); the theorem is the
+// whole trust, and `ring_norm!` only finds the expressions.
+
+pub(open) inductive RingExpr: Type {
+  ReVar(i: Nat): RingExpr
+  ReZero: RingExpr
+  ReOne: RingExpr
+  ReAdd(a: RingExpr, b: RingExpr): RingExpr
+  ReMul(a: RingExpr, b: RingExpr): RingExpr
+  ReNeg(a: RingExpr): RingExpr
+}
+
+// `m`, or `-m` when `minus`.
+pub(open) inductive RingTerm: Type {
+  Rt(minus: Bool, m: List(Nat)): RingTerm
+}
+
+module Rg {
+  // The value of variable `i`; the variables not in the list are 0.
+  pub fn get<A>(zero: A, env: List(A), i: Nat): A {
+    ⊢ A from match env {
+      Nil => zero
+      Cons(h, t) => ⊢ A from match i {
+        Zero => h
+        Succ(k) => Rg::get(zero, t, k)
+      }
+    }
+  }
+
+  pub fn eval<A>(
+    add: (A, A) -> A,
+    zero: A,
+    neg: (A) -> A,
+    mul: (A, A) -> A,
+    one: A,
+    env: List(A),
+    e: RingExpr
+  ): A {
+    ⊢ A from match e {
+      ReVar(i) => Rg::get(zero, env, i)
+      ReZero => zero
+      ReOne => one
+      ReAdd(a, b) => add(
+        Rg::eval(add, zero, neg, mul, one, env, a),
+        Rg::eval(add, zero, neg, mul, one, env, b)
+      )
+      ReMul(a, b) => mul(
+        Rg::eval(add, zero, neg, mul, one, env, a),
+        Rg::eval(add, zero, neg, mul, one, env, b)
+      )
+      ReNeg(a) => neg(Rg::eval(add, zero, neg, mul, one, env, a))
+    }
+  }
+
+  // The product of the variables of a monomial.
+  pub fn mono<A>(zero: A, mul: (A, A) -> A, one: A, env: List(A), m: List(Nat)): A {
+    ⊢ A from match m {
+      Nil => one
+      Cons(v, r) => mul(Rg::get(zero, env, v), Rg::mono(zero, mul, one, env, r))
+    }
+  }
+
+  pub fn sign<A>(neg: (A) -> A, s: Bool, x: A): A {
+    ⊢ A from match s {
+      false => x
+      true => neg(x)
+    }
+  }
+
+  pub fn poly<A>(
+    add: (A, A) -> A,
+    zero: A,
+    neg: (A) -> A,
+    mul: (A, A) -> A,
+    one: A,
+    env: List(A),
+    p: List(RingTerm)
+  ): A {
+    ⊢ A from match p {
+      Nil => zero
+      Cons(t, r) => ⊢ A from match t {
+        Rt(s, m) => add(
+          Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+          Rg::poly(add, zero, neg, mul, one, env, r)
+        )
+      }
+    }
+  }
+
+  pub fn flip(s: Bool): Bool {
+    ⊢ Bool from match s { false => true, true => false }
+  }
+
+  pub fn xor(s: Bool, d: Bool): Bool {
+    ⊢ Bool from match s {
+      false => d
+      true => Rg::flip(d)
+    }
+  }
+
+  // The same monomial twice: the two cancel when the signs differ.
+  pub fn ins_eq(s: Bool, d: Bool, m: List(Nat), n: List(Nat), p2: List(RingTerm)): List(RingTerm) {
+    ⊢ List(RingTerm) from match s {
+      false => ⊢ List(RingTerm) from match d {
+        false => Cons(Rt(false, m), Cons(Rt(false, n), p2))
+        true => p2
+      }
+      true => ⊢ List(RingTerm) from match d {
+        false => p2
+        true => Cons(Rt(true, m), Cons(Rt(true, n), p2))
+      }
+    }
+  }
+
+  pub fn ins_at(
+    o: Ordering,
+    s: Bool,
+    m: List(Nat),
+    d: Bool,
+    n: List(Nat),
+    p2: List(RingTerm),
+    rest: List(RingTerm)
+  ): List(RingTerm) {
+    ⊢ List(RingTerm) from match o {
+      Less => Cons(Rt(s, m), Cons(Rt(d, n), p2))
+      Equal => Rg::ins_eq(s, d, m, n, p2)
+      Greater => Cons(Rt(d, n), rest)
+    }
+  }
+
+  // The term `Rt(s, m)` put in, before the first term whose monomial is not before `m`.
+  pub fn ins(s: Bool, m: List(Nat), p: List(RingTerm)): List(RingTerm) {
+    ⊢ List(RingTerm) from match p {
+      Nil => Cons(Rt(s, m), Nil)
+      Cons(u, p2) => ⊢ List(RingTerm) from match u {
+        Rt(d, n) => Rg::ins_at(Nm::cmp(m, n), s, m, d, n, p2, Rg::ins(s, m, p2))
+      }
+    }
+  }
+
+  pub fn add(p: List(RingTerm), q: List(RingTerm)): List(RingTerm) {
+    ⊢ List(RingTerm) from match p {
+      Nil => q
+      Cons(t, r) => ⊢ List(RingTerm) from match t {
+        Rt(s, m) => Rg::ins(s, m, Rg::add(r, q))
+      }
+    }
+  }
+
+  pub fn neg(p: List(RingTerm)): List(RingTerm) {
+    ⊢ List(RingTerm) from match p {
+      Nil => Nil
+      Cons(t, r) => ⊢ List(RingTerm) from match t {
+        Rt(s, m) => Cons(Rt(Rg::flip(s), m), Rg::neg(r))
+      }
+    }
+  }
+
+  pub fn mul_mono(s: Bool, m: List(Nat), q: List(RingTerm)): List(RingTerm) {
+    ⊢ List(RingTerm) from match q {
+      Nil => Nil
+      Cons(u, r) => ⊢ List(RingTerm) from match u {
+        Rt(d, n) => Rg::ins(Rg::xor(s, d), Nm::mul(m, n), Rg::mul_mono(s, m, r))
+      }
+    }
+  }
+
+  pub fn mul(p: List(RingTerm), q: List(RingTerm)): List(RingTerm) {
+    ⊢ List(RingTerm) from match p {
+      Nil => Nil
+      Cons(t, r) => ⊢ List(RingTerm) from match t {
+        Rt(s, m) => Rg::add(Rg::mul_mono(s, m, q), Rg::mul(r, q))
+      }
+    }
+  }
+
+  pub fn norm(e: RingExpr): List(RingTerm) {
+    ⊢ List(RingTerm) from match e {
+      ReVar(i) => Cons(Rt(false, Cons(i, Nil)), Nil)
+      ReZero => Nil
+      ReOne => Cons(Rt(false, Nil), Nil)
+      ReAdd(a, b) => Rg::add(Rg::norm(a), Rg::norm(b))
+      ReMul(a, b) => Rg::mul(Rg::norm(a), Rg::norm(b))
+      ReNeg(a) => Rg::neg(Rg::norm(a))
+    }
+  }
+}
+
+// The normal form has the value of the expression, for every value of the variables.
+module Rg {
+  pub theorem mono_ins_at<A>(
+    add: (A, A) -> A,
+    zero: A,
+    neg: (A) -> A,
+    mul: (A, A) -> A,
+    one: A,
+    r: CommRing(A, add, zero, neg, mul, one),
+    env: List(A),
+    y: Bool,
+    v: Nat,
+    w: Nat,
+    m2: List(Nat),
+    rest: List(Nat),
+    h: Rg::mono(
+      zero,
+      mul,
+      one,
+      env,
+      rest
+    ) = mul(Rg::get(zero, env, v), Rg::mono(zero, mul, one, env, m2))
+  ): Rg::mono(
+    zero,
+    mul,
+    one,
+    env,
+    Nm::ins_at(y, v, w, m2, rest)
+  ) = mul(Rg::get(zero, env, v), mul(Rg::get(zero, env, w), Rg::mono(zero, mul, one, env, m2))) {
+    ⊢ Rg::mono(
+      zero,
+      mul,
+      one,
+      env,
+      Nm::ins_at(y, v, w, m2, rest)
+    ) = mul(Rg::get(zero, env, v), mul(Rg::get(zero, env, w), Rg::mono(zero, mul, one, env, m2))) from match y {
+      false => Eq::trans(
+        Eq::congr(⟦mul(Rg::get(zero, env, w), □)⟧, h),
+        left_commute(
+          mul,
+          one,
+          ring_mul_comm_monoid(add, zero, neg, mul, one, r),
+          Rg::get(zero, env, w),
+          Rg::get(zero, env, v),
+          Rg::mono(zero, mul, one, env, m2)
+        )
+      )
+      true => Refl
+    }
+  }
+
+  pub theorem mono_ins<A>(
+    add: (A, A) -> A,
+    zero: A,
+    neg: (A) -> A,
+    mul: (A, A) -> A,
+    one: A,
+    r: CommRing(A, add, zero, neg, mul, one),
+    env: List(A),
+    v: Nat,
+    m: List(Nat)
+  ): Rg::mono(
+    zero,
+    mul,
+    one,
+    env,
+    Nm::ins(v, m)
+  ) = mul(Rg::get(zero, env, v), Rg::mono(zero, mul, one, env, m)) {
+    ⊢ Rg::mono(
+      zero,
+      mul,
+      one,
+      env,
+      Nm::ins(v, m)
+    ) = mul(Rg::get(zero, env, v), Rg::mono(zero, mul, one, env, m)) from match m {
+      Nil => Refl
+      Cons(w, m2) => Rg::mono_ins_at(
+        add,
+        zero,
+        neg,
+        mul,
+        one,
+        r,
+        env,
+        v <= w,
+        v,
+        w,
+        m2,
+        Nm::ins(v, m2),
+        Rg::mono_ins(add, zero, neg, mul, one, r, env, v, m2)
+      )
+    }
+  }
+
+  pub theorem mono_mul<A>(
+    add: (A, A) -> A,
+    zero: A,
+    neg: (A) -> A,
+    mul: (A, A) -> A,
+    one: A,
+    r: CommRing(A, add, zero, neg, mul, one),
+    env: List(A),
+    a: List(Nat),
+    b: List(Nat)
+  ): Rg::mono(
+    zero,
+    mul,
+    one,
+    env,
+    Nm::mul(a, b)
+  ) = mul(Rg::mono(zero, mul, one, env, a), Rg::mono(zero, mul, one, env, b)) {
+    ⊢ Rg::mono(
+      zero,
+      mul,
+      one,
+      env,
+      Nm::mul(a, b)
+    ) = mul(Rg::mono(zero, mul, one, env, a), Rg::mono(zero, mul, one, env, b)) from match a {
+      Nil => Eq::sym(
+        left_unit(
+          mul,
+          one,
+          ring_mul_monoid(add, zero, neg, mul, one, r),
+          Rg::mono(zero, mul, one, env, b)
+        )
+      )
+      Cons(v, rest) => Eq::trans(
+        Rg::mono_ins(add, zero, neg, mul, one, r, env, v, Nm::mul(rest, b)),
+        Eq::trans(
+          Eq::congr(
+            ⟦mul(Rg::get(zero, env, v), □)⟧,
+            Rg::mono_mul(add, zero, neg, mul, one, r, env, rest, b)
+          ),
+          Eq::sym(
+            assoc(
+              mul,
+              one,
+              ring_mul_monoid(add, zero, neg, mul, one, r),
+              Rg::get(zero, env, v),
+              Rg::mono(zero, mul, one, env, rest),
+              Rg::mono(zero, mul, one, env, b)
+            )
+          )
+        )
+      )
+    }
+  }
+
+  pub theorem sign_flip<A>(
+    add: (A, A) -> A,
+    zero: A,
+    neg: (A) -> A,
+    mul: (A, A) -> A,
+    one: A,
+    r: CommRing(A, add, zero, neg, mul, one),
+    s: Bool,
+    x: A
+  ): Rg::sign(neg, Rg::flip(s), x) = neg(Rg::sign(neg, s, x)) {
+    ⊢ Rg::sign(neg, Rg::flip(s), x) = neg(Rg::sign(neg, s, x)) from match s {
+      false => Refl
+      true => Eq::sym(ring_neg_neg(add, zero, neg, mul, one, r, x))
+    }
+  }
+
+  pub theorem sign_mul<A>(
+    add: (A, A) -> A,
+    zero: A,
+    neg: (A) -> A,
+    mul: (A, A) -> A,
+    one: A,
+    r: CommRing(A, add, zero, neg, mul, one),
+    s: Bool,
+    d: Bool,
+    x: A,
+    y: A
+  ): Rg::sign(neg, Rg::xor(s, d), mul(x, y)) = mul(Rg::sign(neg, s, x), Rg::sign(neg, d, y)) {
+    ⊢ Rg::sign(
+      neg,
+      Rg::xor(s, d),
+      mul(x, y)
+    ) = mul(Rg::sign(neg, s, x), Rg::sign(neg, d, y)) from match s {
+      false => ⊢ Rg::sign(neg, Rg::xor(false, d), mul(x, y)) = mul(x, Rg::sign(neg, d, y)) from match d {
+        false => Refl
+        true => Eq::sym(ring_mul_neg(add, zero, neg, mul, one, r, x, y))
+      }
+      true => ⊢ Rg::sign(
+        neg,
+        Rg::xor(true, d),
+        mul(x, y)
+      ) = mul(neg(x), Rg::sign(neg, d, y)) from match d {
+        false => Eq::sym(ring_neg_mul(add, zero, neg, mul, one, r, x, y))
+        true => Eq::sym(
+          Eq::trans(
+            ring_neg_mul(add, zero, neg, mul, one, r, x, neg(y)),
+            Eq::trans(
+              Eq::congr(⟦neg(□)⟧, ring_mul_neg(add, zero, neg, mul, one, r, x, y)),
+              ring_neg_neg(add, zero, neg, mul, one, r, mul(x, y))
+            )
+          )
+        )
+      }
+    }
+  }
+}
+
+module Rg {
+  // The same monomial twice: cancelling the two when the signs differ keeps the value.
+  pub theorem ins_eq_sound<A>(
+    add: (A, A) -> A,
+    zero: A,
+    neg: (A) -> A,
+    mul: (A, A) -> A,
+    one: A,
+    r: CommRing(A, add, zero, neg, mul, one),
+    env: List(A),
+    s: Bool,
+    d: Bool,
+    m: List(Nat),
+    n: List(Nat),
+    p2: List(RingTerm),
+    h: m = n
+  ): Rg::poly(
+    add,
+    zero,
+    neg,
+    mul,
+    one,
+    env,
+    Rg::ins_eq(s, d, m, n, p2)
+  ) = add(
+    Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+    add(
+      Rg::sign(neg, d, Rg::mono(zero, mul, one, env, n)),
+      Rg::poly(add, zero, neg, mul, one, env, p2)
+    )
+  ) {
+    let g := ring_group(add, zero, neg, mul, one, r)
+    ⊢ Rg::poly(
+      add,
+      zero,
+      neg,
+      mul,
+      one,
+      env,
+      Rg::ins_eq(s, d, m, n, p2)
+    ) = add(
+      Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+      add(
+        Rg::sign(neg, d, Rg::mono(zero, mul, one, env, n)),
+        Rg::poly(add, zero, neg, mul, one, env, p2)
+      )
+    ) from match s {
+      false => ⊢ Rg::poly(
+        add,
+        zero,
+        neg,
+        mul,
+        one,
+        env,
+        Rg::ins_eq(false, d, m, n, p2)
+      ) = add(
+        Rg::mono(zero, mul, one, env, m),
+        add(
+          Rg::sign(neg, d, Rg::mono(zero, mul, one, env, n)),
+          Rg::poly(add, zero, neg, mul, one, env, p2)
+        )
+      ) from match d {
+        false => Refl
+        true => Eq::trans(
+          Eq::sym(
+            solve_left(
+              add,
+              zero,
+              neg,
+              g,
+              Rg::mono(zero, mul, one, env, m),
+              Rg::poly(add, zero, neg, mul, one, env, p2)
+            )
+          ),
+          Eq::congr(
+            ⟦add(
+              Rg::mono(zero, mul, one, env, m),
+              add(
+                neg(Rg::mono(zero, mul, one, env, □)),
+                Rg::poly(add, zero, neg, mul, one, env, p2)
+              )
+            )⟧,
+            h
+          )
+        )
+      }
+      true => ⊢ Rg::poly(
+        add,
+        zero,
+        neg,
+        mul,
+        one,
+        env,
+        Rg::ins_eq(true, d, m, n, p2)
+      ) = add(
+        neg(Rg::mono(zero, mul, one, env, m)),
+        add(
+          Rg::sign(neg, d, Rg::mono(zero, mul, one, env, n)),
+          Rg::poly(add, zero, neg, mul, one, env, p2)
+        )
+      ) from match d {
+        false => Eq::trans(
+          Eq::sym(
+            undo_left(
+              add,
+              zero,
+              neg,
+              g,
+              Rg::mono(zero, mul, one, env, m),
+              Rg::poly(add, zero, neg, mul, one, env, p2)
+            )
+          ),
+          Eq::congr(
+            ⟦add(
+              neg(Rg::mono(zero, mul, one, env, m)),
+              add(Rg::mono(zero, mul, one, env, □), Rg::poly(add, zero, neg, mul, one, env, p2))
+            )⟧,
+            h
+          )
+        )
+        true => Refl
+      }
+    }
+  }
+
+  pub theorem ins_at_sound<A>(
+    add: (A, A) -> A,
+    zero: A,
+    neg: (A) -> A,
+    mul: (A, A) -> A,
+    one: A,
+    r: CommRing(A, add, zero, neg, mul, one),
+    env: List(A),
+    o: Ordering,
+    s: Bool,
+    m: List(Nat),
+    d: Bool,
+    n: List(Nat),
+    p2: List(RingTerm),
+    rest: List(RingTerm),
+    ho: Nm::cmp(m, n) = o,
+    h: Rg::poly(
+      add,
+      zero,
+      neg,
+      mul,
+      one,
+      env,
+      rest
+    ) = add(
+      Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+      Rg::poly(add, zero, neg, mul, one, env, p2)
+    )
+  ): Rg::poly(
+    add,
+    zero,
+    neg,
+    mul,
+    one,
+    env,
+    Rg::ins_at(o, s, m, d, n, p2, rest)
+  ) = add(
+    Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+    add(
+      Rg::sign(neg, d, Rg::mono(zero, mul, one, env, n)),
+      Rg::poly(add, zero, neg, mul, one, env, p2)
+    )
+  ) {
+    let k := ⊢ (
+      c: Nm::cmp(m, n) = o
+    ) -> Rg::poly(
+      add,
+      zero,
+      neg,
+      mul,
+      one,
+      env,
+      Rg::ins_at(o, s, m, d, n, p2, rest)
+    ) = add(
+      Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+      add(
+        Rg::sign(neg, d, Rg::mono(zero, mul, one, env, n)),
+        Rg::poly(add, zero, neg, mul, one, env, p2)
+      )
+    ) from match o {
+      Less => (c) => Refl
+      Equal => (c) => Rg::ins_eq_sound(
+        add,
+        zero,
+        neg,
+        mul,
+        one,
+        r,
+        env,
+        s,
+        d,
+        m,
+        n,
+        p2,
+        Nm::cmp_sound(m, n, c)
+      )
+      Greater => (c) => Eq::trans(
+        Eq::congr(⟦add(Rg::sign(neg, d, Rg::mono(zero, mul, one, env, n)), □)⟧, h),
+        left_commute(
+          add,
+          zero,
+          ring_add_comm_monoid(add, zero, neg, mul, one, r),
+          Rg::sign(neg, d, Rg::mono(zero, mul, one, env, n)),
+          Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+          Rg::poly(add, zero, neg, mul, one, env, p2)
+        )
+      )
+    }
+    k(ho)
+  }
+
+  pub theorem ins_sound<A>(
+    add: (A, A) -> A,
+    zero: A,
+    neg: (A) -> A,
+    mul: (A, A) -> A,
+    one: A,
+    r: CommRing(A, add, zero, neg, mul, one),
+    env: List(A),
+    s: Bool,
+    m: List(Nat),
+    p: List(RingTerm)
+  ): Rg::poly(
+    add,
+    zero,
+    neg,
+    mul,
+    one,
+    env,
+    Rg::ins(s, m, p)
+  ) = add(
+    Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+    Rg::poly(add, zero, neg, mul, one, env, p)
+  ) {
+    ⊢ Rg::poly(
+      add,
+      zero,
+      neg,
+      mul,
+      one,
+      env,
+      Rg::ins(s, m, p)
+    ) = add(
+      Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+      Rg::poly(add, zero, neg, mul, one, env, p)
+    ) from match p {
+      Nil => Refl
+      Cons(u, p2) => ⊢ Rg::poly(
+        add,
+        zero,
+        neg,
+        mul,
+        one,
+        env,
+        Rg::ins(s, m, Cons(u, p2))
+      ) = add(
+        Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+        Rg::poly(add, zero, neg, mul, one, env, Cons(u, p2))
+      ) from match u {
+        Rt(d, n) => Rg::ins_at_sound(
+          add,
+          zero,
+          neg,
+          mul,
+          one,
+          r,
+          env,
+          Nm::cmp(m, n),
+          s,
+          m,
+          d,
+          n,
+          p2,
+          Rg::ins(s, m, p2),
+          Refl,
+          Rg::ins_sound(add, zero, neg, mul, one, r, env, s, m, p2)
+        )
+      }
+    }
+  }
+}
+
+module Rg {
+  pub theorem add_sound<A>(
+    add: (A, A) -> A,
+    zero: A,
+    neg: (A) -> A,
+    mul: (A, A) -> A,
+    one: A,
+    r: CommRing(A, add, zero, neg, mul, one),
+    env: List(A),
+    p: List(RingTerm),
+    q: List(RingTerm)
+  ): Rg::poly(
+    add,
+    zero,
+    neg,
+    mul,
+    one,
+    env,
+    Rg::add(p, q)
+  ) = add(Rg::poly(add, zero, neg, mul, one, env, p), Rg::poly(add, zero, neg, mul, one, env, q)) {
+    ⊢ Rg::poly(
+      add,
+      zero,
+      neg,
+      mul,
+      one,
+      env,
+      Rg::add(p, q)
+    ) = add(Rg::poly(add, zero, neg, mul, one, env, p), Rg::poly(add, zero, neg, mul, one, env, q)) from match p {
+      Nil => Eq::sym(
+        left_unit(
+          add,
+          zero,
+          ring_add_monoid(add, zero, neg, mul, one, r),
+          Rg::poly(add, zero, neg, mul, one, env, q)
+        )
+      )
+      Cons(t, rest) => ⊢ Rg::poly(
+        add,
+        zero,
+        neg,
+        mul,
+        one,
+        env,
+        Rg::add(Cons(t, rest), q)
+      ) = add(
+        Rg::poly(add, zero, neg, mul, one, env, Cons(t, rest)),
+        Rg::poly(add, zero, neg, mul, one, env, q)
+      ) from match t {
+        Rt(s, m) => Eq::trans(
+          Rg::ins_sound(add, zero, neg, mul, one, r, env, s, m, Rg::add(rest, q)),
+          Eq::trans(
+            Eq::congr(
+              ⟦add(Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)), □)⟧,
+              Rg::add_sound(add, zero, neg, mul, one, r, env, rest, q)
+            ),
+            Eq::sym(
+              assoc(
+                add,
+                zero,
+                ring_add_monoid(add, zero, neg, mul, one, r),
+                Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+                Rg::poly(add, zero, neg, mul, one, env, rest),
+                Rg::poly(add, zero, neg, mul, one, env, q)
+              )
+            )
+          )
+        )
+      }
+    }
+  }
+
+  pub theorem neg_sound<A>(
+    add: (A, A) -> A,
+    zero: A,
+    neg: (A) -> A,
+    mul: (A, A) -> A,
+    one: A,
+    r: CommRing(A, add, zero, neg, mul, one),
+    env: List(A),
+    p: List(RingTerm)
+  ): Rg::poly(
+    add,
+    zero,
+    neg,
+    mul,
+    one,
+    env,
+    Rg::neg(p)
+  ) = neg(Rg::poly(add, zero, neg, mul, one, env, p)) {
+    ⊢ Rg::poly(
+      add,
+      zero,
+      neg,
+      mul,
+      one,
+      env,
+      Rg::neg(p)
+    ) = neg(Rg::poly(add, zero, neg, mul, one, env, p)) from match p {
+      Nil => Eq::sym(ring_neg_zero(add, zero, neg, mul, one, r))
+      Cons(t, rest) => ⊢ Rg::poly(
+        add,
+        zero,
+        neg,
+        mul,
+        one,
+        env,
+        Rg::neg(Cons(t, rest))
+      ) = neg(Rg::poly(add, zero, neg, mul, one, env, Cons(t, rest))) from match t {
+        Rt(s, m) => Eq::trans(
+          Eq::congr(
+            ⟦add(□, Rg::poly(add, zero, neg, mul, one, env, Rg::neg(rest)))⟧,
+            Rg::sign_flip(add, zero, neg, mul, one, r, s, Rg::mono(zero, mul, one, env, m))
+          ),
+          Eq::trans(
+            Eq::congr(
+              ⟦add(neg(Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m))), □)⟧,
+              Rg::neg_sound(add, zero, neg, mul, one, r, env, rest)
+            ),
+            Eq::sym(
+              ring_neg_add(
+                add,
+                zero,
+                neg,
+                mul,
+                one,
+                r,
+                Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+                Rg::poly(add, zero, neg, mul, one, env, rest)
+              )
+            )
+          )
+        )
+      }
+    }
+  }
+
+  pub theorem mul_mono_sound<A>(
+    add: (A, A) -> A,
+    zero: A,
+    neg: (A) -> A,
+    mul: (A, A) -> A,
+    one: A,
+    r: CommRing(A, add, zero, neg, mul, one),
+    env: List(A),
+    s: Bool,
+    m: List(Nat),
+    q: List(RingTerm)
+  ): Rg::poly(
+    add,
+    zero,
+    neg,
+    mul,
+    one,
+    env,
+    Rg::mul_mono(s, m, q)
+  ) = mul(
+    Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+    Rg::poly(add, zero, neg, mul, one, env, q)
+  ) {
+    ⊢ Rg::poly(
+      add,
+      zero,
+      neg,
+      mul,
+      one,
+      env,
+      Rg::mul_mono(s, m, q)
+    ) = mul(
+      Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+      Rg::poly(add, zero, neg, mul, one, env, q)
+    ) from match q {
+      Nil => Eq::sym(
+        ring_mul_zero(
+          add,
+          zero,
+          neg,
+          mul,
+          one,
+          r,
+          Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m))
+        )
+      )
+      Cons(u, rest) => ⊢ Rg::poly(
+        add,
+        zero,
+        neg,
+        mul,
+        one,
+        env,
+        Rg::mul_mono(s, m, Cons(u, rest))
+      ) = mul(
+        Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+        Rg::poly(add, zero, neg, mul, one, env, Cons(u, rest))
+      ) from match u {
+        Rt(d, n) => Eq::trans(
+          Rg::ins_sound(
+            add,
+            zero,
+            neg,
+            mul,
+            one,
+            r,
+            env,
+            Rg::xor(s, d),
+            Nm::mul(m, n),
+            Rg::mul_mono(s, m, rest)
+          ),
+          Eq::trans(
+            Eq::congr(
+              ⟦add(
+                Rg::sign(neg, Rg::xor(s, d), □),
+                Rg::poly(add, zero, neg, mul, one, env, Rg::mul_mono(s, m, rest))
+              )⟧,
+              Rg::mono_mul(add, zero, neg, mul, one, r, env, m, n)
+            ),
+            Eq::trans(
+              Eq::congr(
+                ⟦add(□, Rg::poly(add, zero, neg, mul, one, env, Rg::mul_mono(s, m, rest)))⟧,
+                Rg::sign_mul(
+                  add,
+                  zero,
+                  neg,
+                  mul,
+                  one,
+                  r,
+                  s,
+                  d,
+                  Rg::mono(zero, mul, one, env, m),
+                  Rg::mono(zero, mul, one, env, n)
+                )
+              ),
+              Eq::trans(
+                Eq::congr(
+                  ⟦add(
+                    mul(
+                      Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+                      Rg::sign(neg, d, Rg::mono(zero, mul, one, env, n))
+                    ),
+                    □
+                  )⟧,
+                  Rg::mul_mono_sound(add, zero, neg, mul, one, r, env, s, m, rest)
+                ),
+                Eq::sym(
+                  ring_distrib_left(
+                    add,
+                    zero,
+                    neg,
+                    mul,
+                    one,
+                    r,
+                    Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+                    Rg::sign(neg, d, Rg::mono(zero, mul, one, env, n)),
+                    Rg::poly(add, zero, neg, mul, one, env, rest)
+                  )
+                )
+              )
+            )
+          )
+        )
+      }
+    }
+  }
+
+  pub theorem mul_sound<A>(
+    add: (A, A) -> A,
+    zero: A,
+    neg: (A) -> A,
+    mul: (A, A) -> A,
+    one: A,
+    r: CommRing(A, add, zero, neg, mul, one),
+    env: List(A),
+    p: List(RingTerm),
+    q: List(RingTerm)
+  ): Rg::poly(
+    add,
+    zero,
+    neg,
+    mul,
+    one,
+    env,
+    Rg::mul(p, q)
+  ) = mul(Rg::poly(add, zero, neg, mul, one, env, p), Rg::poly(add, zero, neg, mul, one, env, q)) {
+    ⊢ Rg::poly(
+      add,
+      zero,
+      neg,
+      mul,
+      one,
+      env,
+      Rg::mul(p, q)
+    ) = mul(Rg::poly(add, zero, neg, mul, one, env, p), Rg::poly(add, zero, neg, mul, one, env, q)) from match p {
+      Nil => Eq::sym(
+        ring_zero_mul(add, zero, neg, mul, one, r, Rg::poly(add, zero, neg, mul, one, env, q))
+      )
+      Cons(t, rest) => ⊢ Rg::poly(
+        add,
+        zero,
+        neg,
+        mul,
+        one,
+        env,
+        Rg::mul(Cons(t, rest), q)
+      ) = mul(
+        Rg::poly(add, zero, neg, mul, one, env, Cons(t, rest)),
+        Rg::poly(add, zero, neg, mul, one, env, q)
+      ) from match t {
+        Rt(s, m) => Eq::trans(
+          Rg::add_sound(add, zero, neg, mul, one, r, env, Rg::mul_mono(s, m, q), Rg::mul(rest, q)),
+          Eq::trans(
+            Eq::congr(
+              ⟦add(□, Rg::poly(add, zero, neg, mul, one, env, Rg::mul(rest, q)))⟧,
+              Rg::mul_mono_sound(add, zero, neg, mul, one, r, env, s, m, q)
+            ),
+            Eq::trans(
+              Eq::congr(
+                ⟦add(
+                  mul(
+                    Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+                    Rg::poly(add, zero, neg, mul, one, env, q)
+                  ),
+                  □
+                )⟧,
+                Rg::mul_sound(add, zero, neg, mul, one, r, env, rest, q)
+              ),
+              Eq::sym(
+                ring_distrib_right(
+                  add,
+                  zero,
+                  neg,
+                  mul,
+                  one,
+                  r,
+                  Rg::sign(neg, s, Rg::mono(zero, mul, one, env, m)),
+                  Rg::poly(add, zero, neg, mul, one, env, rest),
+                  Rg::poly(add, zero, neg, mul, one, env, q)
+                )
+              )
+            )
+          )
+        )
+      }
+    }
+  }
+
+  pub theorem norm_sound<A>(
+    add: (A, A) -> A,
+    zero: A,
+    neg: (A) -> A,
+    mul: (A, A) -> A,
+    one: A,
+    r: CommRing(A, add, zero, neg, mul, one),
+    env: List(A),
+    e: RingExpr
+  ): Rg::eval(
+    add,
+    zero,
+    neg,
+    mul,
+    one,
+    env,
+    e
+  ) = Rg::poly(add, zero, neg, mul, one, env, Rg::norm(e)) {
+    ⊢ Rg::eval(
+      add,
+      zero,
+      neg,
+      mul,
+      one,
+      env,
+      e
+    ) = Rg::poly(add, zero, neg, mul, one, env, Rg::norm(e)) from match e {
+      ReVar(i) => Eq::sym(
+        Eq::trans(
+          right_unit(
+            add,
+            zero,
+            ring_add_monoid(add, zero, neg, mul, one, r),
+            mul(Rg::get(zero, env, i), one)
+          ),
+          right_unit(mul, one, ring_mul_monoid(add, zero, neg, mul, one, r), Rg::get(zero, env, i))
+        )
+      )
+      ReZero => Refl
+      ReOne => Eq::sym(right_unit(add, zero, ring_add_monoid(add, zero, neg, mul, one, r), one))
+      ReAdd(a, b) => Eq::trans(
+        Eq::congr(
+          ⟦add(□, Rg::eval(add, zero, neg, mul, one, env, b))⟧,
+          Rg::norm_sound(add, zero, neg, mul, one, r, env, a)
+        ),
+        Eq::trans(
+          Eq::congr(
+            ⟦add(Rg::poly(add, zero, neg, mul, one, env, Rg::norm(a)), □)⟧,
+            Rg::norm_sound(add, zero, neg, mul, one, r, env, b)
+          ),
+          Eq::sym(Rg::add_sound(add, zero, neg, mul, one, r, env, Rg::norm(a), Rg::norm(b)))
+        )
+      )
+      ReMul(a, b) => Eq::trans(
+        Eq::congr(
+          ⟦mul(□, Rg::eval(add, zero, neg, mul, one, env, b))⟧,
+          Rg::norm_sound(add, zero, neg, mul, one, r, env, a)
+        ),
+        Eq::trans(
+          Eq::congr(
+            ⟦mul(Rg::poly(add, zero, neg, mul, one, env, Rg::norm(a)), □)⟧,
+            Rg::norm_sound(add, zero, neg, mul, one, r, env, b)
+          ),
+          Eq::sym(Rg::mul_sound(add, zero, neg, mul, one, r, env, Rg::norm(a), Rg::norm(b)))
+        )
+      )
+      ReNeg(a) => Eq::trans(
+        Eq::congr(⟦neg(□)⟧, Rg::norm_sound(add, zero, neg, mul, one, r, env, a)),
+        Eq::sym(Rg::neg_sound(add, zero, neg, mul, one, r, env, Rg::norm(a)))
+      )
+    }
+  }
+}
+
+// `a = b` when `a + -b` normalises to no term. The trust of `ring_norm!`.
+pub theorem ring_norm_eq<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  r: CommRing(A, add, zero, neg, mul, one),
+  env: List(A),
+  a: RingExpr,
+  b: RingExpr,
+  same: Rg::norm(ReAdd(a, ReNeg(b))) = Nil
+): Rg::eval(add, zero, neg, mul, one, env, a) = Rg::eval(add, zero, neg, mul, one, env, b) {
+  ring_eq_of_sub(
+    add,
+    zero,
+    neg,
+    mul,
+    one,
+    r,
+    Rg::eval(add, zero, neg, mul, one, env, a),
+    Rg::eval(add, zero, neg, mul, one, env, b),
+    Eq::trans(
+      Rg::norm_sound(add, zero, neg, mul, one, r, env, ReAdd(a, ReNeg(b))),
+      Eq::congr(⟦Rg::poly(add, zero, neg, mul, one, env, □)⟧, same)
+    )
+  )
+}

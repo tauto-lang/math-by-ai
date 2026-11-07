@@ -1,0 +1,43 @@
+import std::Base
+import std::Tactic
+import algebra::ring
+import algebra::ring_notation { ring }
+import algebra::ring_tactic { ring_norm }
+import geometry::point
+import geometry::notation { geo }
+import geometry::parallelogram
+
+// An identity in any commutative ring, checked by `ring_norm!`.
+theorem square_of_difference<K>(
+  add: (K, K) -> K,
+  zero: K,
+  neg: (K) -> K,
+  mul: (K, K) -> K,
+  one: K,
+  r: CommRing(K, add, zero, neg, mul, one),
+  a: K,
+  b: K
+): ring!(`add, zero, neg, mul, one; (a - b) * (a - b) = a * a - (1 + 1) * a * b + b * b`) {
+  by ring_norm!(r): ring!(`add, zero, neg, mul, one; (a - b) * (a - b) = a * a - (1 + 1) * a * b + b * b`) {}
+}
+
+// A parallelogram has opposite sides of the same length.
+theorem opposite_sides<K>(
+  add: (K, K) -> K,
+  zero: K,
+  neg: (K) -> K,
+  mul: (K, K) -> K,
+  one: K,
+  d: IntegralDomain(K, add, zero, neg, mul, one),
+  A: Point(K),
+  B: Point(K),
+  C: Point(K),
+  D: Point(K),
+  ab_dc: geo!(`add, zero, neg, mul, one; AB ∥ DC`),
+  ad_bc: geo!(`add, zero, neg, mul, one; AD ∥ BC`),
+  proper: geo!(`add, zero, neg, mul, one; ¬(AB ∥ AD)`)
+): geo!(`add, zero, neg, mul, one; AB ≅ DC`) {
+  ⊢ geo!(`add, zero, neg, mul, one; AB ≅ DC`) from match parallelogram_opposite_sides(add, zero, neg, mul, one, d, A, B, C, D, ab_dc, ad_bc, proper) {
+    AndIntro(sides, _) => sides
+  }
+}

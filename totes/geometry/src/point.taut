@@ -1,0 +1,14 @@
+import std::Base
+
+// A point of the plane over a ring `K`, by its two coordinates.
+pub(open) inductive Point(K: Type): Type {
+  Pt(x: K, y: K): Point(K)
+}
+
+pub fn px<K>(p: Point(K)): K {
+  ⊢ K from match p { Pt(x, y) => x }
+}
+
+pub fn py<K>(p: Point(K)): K {
+  ⊢ K from match p { Pt(x, y) => y }
+}

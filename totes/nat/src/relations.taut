@@ -37,7 +37,7 @@ RParen: ')';
   enum Atom, struct Reference, struct Arguments, struct Arguments_Rep1, struct Paren, fn parse
 
 pub fn relation_name(t: SynToken): SynExpr {
-  ExVar(SynIdent { name: t.text, ctx: t.ctx, span: t.span })
+  ExVar(Syn::ident(t))
 }
 pub fn relation_arguments(
   first: nat_relations::Sum,

@@ -1,0 +1,9 @@
+import std::Base
+
+// A classical decision includes evidence for the chosen alternative.
+// No axiom is declared: the real diagonal theorem takes a decider as an
+// explicit logical hypothesis. The binary diagonal theorem does not need it.
+pub(open) inductive Decision(P: Prop): Type {
+  Yes(proof: P): Decision(P)
+  No(refutation: ¬P): Decision(P)
+}

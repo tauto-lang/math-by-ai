@@ -1,0 +1,69 @@
+import std::Base
+import std::Rat
+import std::Int
+import std::RatLaws
+import "rational_order.taut"
+import "interval.taut"
+import "real.taut"
+
+pub fn interval_lower(boxes: (Nat) -> Interval, q: Rat): Prop {
+  ∃ n: Nat. RationalLt(q, left(boxes(n)))
+}
+
+pub theorem interval_cut_downward(
+  boxes: (Nat) -> Interval,
+  p: Rat,
+  q: Rat,
+  pq: RationalLt(p, q),
+  h: interval_lower(boxes, q)
+): interval_lower(boxes, p) {
+  ⊢ interval_lower(boxes, p) from match h {
+    ExIntro(n, lt) => ExIntro(n, rational_lt_trans(p, q, left(boxes(n)), pq, lt))
+  }
+}
+pub theorem interval_cut_rounded(
+  boxes: (Nat) -> Interval,
+  p: Rat,
+  h: interval_lower(boxes, p)
+): ∃ q: Rat. RationalLt(p, q) ∧ interval_lower(boxes, q) {
+  ⊢ ∃ q: Rat. RationalLt(p, q) ∧ interval_lower(boxes, q) from match h {
+    ExIntro(n, lt) => ExIntro(
+      rational_between(p, left(boxes(n))),
+      AndIntro(
+        rational_between_left(p, left(boxes(n)), lt),
+        ExIntro(n, rational_between_right(p, left(boxes(n)), lt))
+      )
+    )
+  }
+}
+pub theorem interval_cut_bounded(
+  boxes: (Nat) -> Interval,
+  nested: (n: Nat) -> Inside(boxes(Succ(n)), boxes(n)),
+  n: Nat
+): ¬interval_lower(boxes, right(boxes(n))) {
+  (h: interval_lower(boxes, right(boxes(n)))) => ⊢ False from match h {
+    ExIntro(k, lt) => lt(
+      rational_lt_le(left(boxes(k)), right(boxes(n)), chain_cross(boxes, nested, k, n))
+    )
+  }
+}
+
+pub fn interval_real(
+  boxes: (Nat) -> Interval,
+  nested: (n: Nat) -> Inside(boxes(Succ(n)), boxes(n)),
+  inhabited: ∃ q: Rat. interval_lower(boxes, q)
+): Real {
+  Dedekind(
+    (q: Rat) => interval_lower(boxes, q),
+    inhabited,
+    ExIntro(right(boxes(0)), interval_cut_bounded(boxes, nested, 0)),
+    (p: Rat, q: Rat, pq: RationalLt(p, q), h: interval_lower(boxes, q)) => interval_cut_downward(
+      boxes,
+      p,
+      q,
+      pq,
+      h
+    ),
+    (p: Rat, h: interval_lower(boxes, p)) => interval_cut_rounded(boxes, p, h)
+  )
+}

@@ -1,0 +1,7 @@
+import std::Base
+import "classical.taut"
+
+// Informative excluded middle, isolated from the constructive library.
+// This is a logical axiom, not a claim about real numbers or cardinalities.
+// Every theorem that uses it reports it in `tauto assumptions`.
+pub axiom classical_decision(P: Prop): Decision(P)

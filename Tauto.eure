@@ -6,4 +6,5 @@ dependencies {
   core { path = "totes/core" }
   algebra { path = "totes/algebra" }
   nat { path = "totes/nat" }
+  geometry { path = "totes/geometry" }
 }

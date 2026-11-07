@@ -1,3 +1,4 @@
+import std::Calc { calc }
 import std::Base
 import std::Nat
 import std::NatDiv
@@ -16,10 +17,14 @@ pub(open) inductive Factorization(n: Nat, xs: List(Nat)): Prop {
   Factored(primes: AllPrime(xs), product: nat!(`prod(xs) = n`)): Factorization(n, xs)
 }
 pub theorem factorization_primes(n: Nat, xs: List(Nat), h: Factorization(n, xs)): AllPrime(xs) {
-  match h: AllPrime(xs) { Factored(ps, product) => ps }
+  ⊢ AllPrime(xs) from match h { Factored(ps, product) => ps }
 }
-pub theorem factorization_product(n: Nat, xs: List(Nat), h: Factorization(n, xs)): nat!(`prod(xs) = n`) {
-  match h: nat!(`prod(xs) = n`) { Factored(ps, product) => product }
+pub theorem factorization_product(
+  n: Nat,
+  xs: List(Nat),
+  h: Factorization(n, xs)
+): nat!(`prod(xs) = n`) {
+  ⊢ nat!(`prod(xs) = n`) from match h { Factored(ps, product) => product }
 }
 pub theorem primes_append(
   xs: List(Nat),
@@ -27,7 +32,7 @@ pub theorem primes_append(
   hx: AllPrime(xs),
   hy: AllPrime(ys)
 ): AllPrime(List::append(xs, ys)) {
-  match hx: AllPrime(List::append(xs, ys)) {
+  ⊢ AllPrime(List::append(xs, ys)) from match hx {
     PrimesNil => hy
     PrimesCons(p, rest, hp, hr) => PrimesCons(
       p,
@@ -47,23 +52,24 @@ pub theorem factorization_append(
 ): Factorization(nat!(`a * b`), List::append(xs, ys)) {
   Factored(
     primes_append(xs, ys, factorization_primes(a, xs, hx), factorization_primes(b, ys, hy)),
-    calc nat!(`prod(List::append(xs, ys))`) {
-      = nat!(`prod(xs) * prod(ys)`) from prod_append(xs, ys)
-      = nat!(`a * prod(ys)`) from Eq::congr(
+    calc!(```
+      $nat!(`prod(List::append(xs, ys))`)
+      = $nat!(`prod(xs) * prod(ys)`) from $prod_append(xs, ys)
+      = $nat!(`a * prod(ys)`) from $Eq::congr(
         (x: Nat) => nat!(`x * prod(ys)`),
         factorization_product(a, xs, hx)
       )
-      = nat!(`a * b`) from Eq::congr((y: Nat) => nat!(`a * y`), factorization_product(b, ys, hy))
-    }
+      = $nat!(`a * b`) from $Eq::congr((y: Nat) => nat!(`a * y`), factorization_product(b, ys, hy))
+      ```)
   )
 }
 
 fn factor_loop(steps: Nat, n: Nat): List(Nat) decreasing_by steps {
-  match n: List(Nat) {
+  ⊢ List(Nat) from match n {
     Zero => Nil
-    Succ(k) => match k: List(Nat) {
+    Succ(k) => ⊢ List(Nat) from match k {
       Zero => Nil
-      Succ(j) => match steps: List(Nat) {
+      Succ(j) => ⊢ List(Nat) from match steps {
         Zero => Nil
         Succ(f) => if is_prime(n) { Cons(n, Nil) } else {
           let d := find_factor(n, n)
@@ -108,7 +114,7 @@ pub theorem descending_bound(
   lt: nat!(`m < n`),
   bound: nat!(`n ≤ Succ(f)`)
 ): nat!(`m ≤ f`) {
-  match n: nat!(`m ≤ f`) {
+  ⊢ nat!(`m ≤ f`) from match n {
     Zero => False::elim(false_ne_true(Eq::trans(Eq::sym(Nat::lt_zero_false(m)), lt)))
     Succ(k) => Nat::le_trans(m, k, f, lt, bound)
   }
@@ -120,14 +126,14 @@ theorem factor_loop_correct(
   positive: nat!(`0 < n`),
   bound: nat!(`n ≤ steps`)
 ): Factorization(n, factor_loop(steps, n)) {
-  match steps: Factorization(n, factor_loop(steps, n)) {
-    Zero => match n: Factorization(n, factor_loop(Zero, n)) {
+  ⊢ Factorization(n, factor_loop(steps, n)) from match steps {
+    Zero => ⊢ Factorization(n, factor_loop(Zero, n)) from match n {
       Zero => False::elim(false_ne_true(positive))
       Succ(k) => False::elim(false_ne_true(Eq::trans(Eq::sym(Nat::lt_zero_false(k)), bound)))
     }
-    Succ(f) => match n: Factorization(n, factor_loop(Succ(f), n)) {
+    Succ(f) => ⊢ Factorization(n, factor_loop(Succ(f), n)) from match n {
       Zero => False::elim(false_ne_true(positive))
-      Succ(k) => match k: Factorization(Succ(k), factor_loop(Succ(f), Succ(k))) {
+      Succ(k) => ⊢ Factorization(Succ(k), factor_loop(Succ(f), Succ(k))) from match k {
         Zero => Factored(PrimesNil, Refl)
         Succ(j) => Or::elim(boolean_cases(is_prime(Succ(Succ(j)))),
           (bad: is_prime(Succ(Succ(j))) = false) => {

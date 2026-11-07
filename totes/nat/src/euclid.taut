@@ -1,3 +1,4 @@
+import std::Calc { calc }
 import std::Base
 import std::Nat
 import std::NatDiv
@@ -16,10 +17,10 @@ pub(open) inductive IsGcd(a: Nat, b: Nat, g: Nat): Prop {
   ): IsGcd(a, b, g)
 }
 pub theorem gcd_left(a: Nat, b: Nat, g: Nat, h: IsGcd(a, b, g)): nat_rel!(`g | a`) {
-  match h: nat_rel!(`g | a`) { Greatest(l, r, all) => l }
+  ⊢ nat_rel!(`g | a`) from match h { Greatest(l, r, all) => l }
 }
 pub theorem gcd_right(a: Nat, b: Nat, g: Nat, h: IsGcd(a, b, g)): nat_rel!(`g | b`) {
-  match h: nat_rel!(`g | b`) { Greatest(l, r, all) => r }
+  ⊢ nat_rel!(`g | b`) from match h { Greatest(l, r, all) => r }
 }
 pub theorem gcd_greatest(
   a: Nat,
@@ -30,22 +31,23 @@ pub theorem gcd_greatest(
   da: nat_rel!(`d | a`),
   db: nat_rel!(`d | b`)
 ): nat_rel!(`d | g`) {
-  match h: nat_rel!(`d | g`) { Greatest(l, r, all) => all(d, da, db) }
+  ⊢ nat_rel!(`d | g`) from match h { Greatest(l, r, all) => all(d, da, db) }
 }
 pub theorem remainder_sub(
   a: Nat,
   b: Nat,
   nz: logic!(`¬(b = 0)`)
 ): nat!(`Nat::rem_nz(a, b, nz) = a - b * Nat::div_nz(a, b, nz)`) {
-  calc nat!(`Nat::rem_nz(a, b, nz)`) {
-    = nat!(
+  calc!(```
+    $nat!(`Nat::rem_nz(a, b, nz)`)
+    = $nat!(
       `(b * Nat::div_nz(a, b, nz) + Nat::rem_nz(a, b, nz)) - b * Nat::div_nz(a, b, nz)`
-    ) from Eq::sym(sub_sum_left(nat!(`b * Nat::div_nz(a, b, nz)`), Nat::rem_nz(a, b, nz)))
-    = nat!(`a - b * Nat::div_nz(a, b, nz)`) from Eq::congr(
+    ) from $Eq::sym(sub_sum_left(nat!(`b * Nat::div_nz(a, b, nz)`), Nat::rem_nz(a, b, nz)))
+    = $nat!(`a - b * Nat::div_nz(a, b, nz)`) from $Eq::congr(
       (x: Nat) => nat!(`x - b * Nat::div_nz(a, b, nz)`),
       Nat::div_mod_eq(a, b, nz)
     )
-  }
+    ```)
 }
 pub theorem divides_remainder(
   d: Nat,
@@ -101,9 +103,9 @@ pub theorem gcd_step(
 
 // The public function supplies b steps. Correctness proves these always suffice.
 pub fn euclid_loop(steps: Nat, a: Nat, b: Nat): Nat decreasing_by steps {
-  match b: Nat {
+  ⊢ Nat from match b {
     Zero => a
-    Succ(k) => match steps: Nat {
+    Succ(k) => ⊢ Nat from match steps {
       Zero => a
       Succ(f) => euclid_loop(f, Succ(k), Nat::rem_nz(a, Succ(k), Nat::succ_ne_zero(k)))
     }
@@ -125,8 +127,8 @@ theorem loop_correct(
   b: Nat,
   bound: nat!(`b ≤ steps`)
 ): IsGcd(a, b, euclid_loop(steps, a, b)) {
-  match steps: IsGcd(a, b, euclid_loop(steps, a, b)) {
-    Zero => match b: IsGcd(a, b, euclid_loop(Zero, a, b)) {
+  ⊢ IsGcd(a, b, euclid_loop(steps, a, b)) from match steps {
+    Zero => ⊢ IsGcd(a, b, euclid_loop(Zero, a, b)) from match b {
       Zero => Greatest(
         divides_refl(a),
         divides_zero(a),
@@ -134,7 +136,7 @@ theorem loop_correct(
       )
       Succ(k) => False::elim(false_ne_true(Eq::trans(Eq::sym(Nat::lt_zero_false(k)), bound)))
     }
-    Succ(f) => match b: IsGcd(a, b, euclid_loop(Succ(f), a, b)) {
+    Succ(f) => ⊢ IsGcd(a, b, euclid_loop(Succ(f), a, b)) from match b {
       Zero => Greatest(
         divides_refl(a),
         divides_zero(a),
@@ -213,10 +215,11 @@ pub theorem gcd_self(a: Nat): nat!(`gcd(a, a) = a`) {
 }
 pub theorem gcd_zero_right(a: Nat): nat!(`gcd(a, 0) = a`) { Refl }
 pub theorem gcd_zero_left(a: Nat): nat!(`gcd(0, a) = a`) {
-  calc nat!(`gcd(0, a)`) {
-    = nat!(`gcd(a, 0)`) from gcd_comm(0, a)
-    = a from gcd_zero_right(a)
-  }
+  calc!(```
+    $nat!(`gcd(0, a)`)
+    = $nat!(`gcd(a, 0)`) from $gcd_comm(0, a)
+    = $a from $gcd_zero_right(a)
+    ```)
 }
 pub theorem gcd_euclid(
   a: Nat,

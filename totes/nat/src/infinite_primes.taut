@@ -11,22 +11,24 @@ import "primes.taut"
 import "primality.taut"
 import "factorization.taut"
 import "unique_factorization.taut"
+import std::proof::Lang { proof }
+import std::proof::Forms { proof_by, proof_case, proof_consider, proof_this }
 
 pub fn factorial(n: Nat): Nat {
-  match n: Nat { Zero => 1
+  ⊢ Nat from match n { Zero => 1
     Succ(k) => nat!(`Succ(k) * factorial(k)`) }
 }
 theorem positive_mul(a: Nat, b: Nat, ha: nat!(`0 < a`), hb: nat!(`0 < b`)): nat!(`0 < a * b`) {
-  match a: nat!(`0 < a * b`) {
+  ⊢ nat!(`0 < a * b`) from match a {
     Zero => False::elim(false_ne_true(ha))
-    Succ(k) => match b: nat!(`0 < Succ(k) * b`) {
+    Succ(k) => ⊢ nat!(`0 < Succ(k) * b`) from match b {
       Zero => False::elim(false_ne_true(hb))
       Succ(j) => Eq::congr((x: Nat) => Nat::lt(0, x), Nat::mul_succ_left(k, Succ(j)))
     }
   }
 }
 pub theorem factorial_positive(n: Nat): nat!(`0 < factorial(n)`) {
-  match n: nat!(`0 < factorial(n)`) {
+  ⊢ nat!(`0 < factorial(n)`) from match n {
     Zero => Refl
     Succ(k) => positive_mul(Succ(k), factorial(k), Refl, factorial_positive(k))
   }
@@ -37,8 +39,8 @@ pub theorem divides_factorial(
   positive: nat!(`0 < d`),
   bound: nat!(`d ≤ n`)
 ): nat_rel!(`d | factorial(n)`) {
-  match n: nat_rel!(`d | factorial(n)`) {
-    Zero => match d: nat_rel!(`d | factorial(0)`) {
+  ⊢ nat_rel!(`d | factorial(n)`) from match n {
+    Zero => ⊢ nat_rel!(`d | factorial(0)`) from match d {
       Zero => False::elim(false_ne_true(positive))
       Succ(k) => False::elim(false_ne_true(Eq::trans(Eq::sym(Nat::lt_zero_false(k)), bound)))
     }
@@ -59,9 +61,9 @@ pub theorem divides_factorial(
   }
 }
 theorem le_false_lt(a: Nat, b: Nat, h: Nat::le(a, b) = false): nat!(`b < a`) {
-  match a: nat!(`b < a`) {
+  ⊢ nat!(`b < a`) from match a {
     Zero => False::elim(true_ne_false(Eq::trans(Eq::sym(Nat::le_zero(b)), h)))
-    Succ(k) => match b: nat!(`b < Succ(k)`) {
+    Succ(k) => ⊢ nat!(`b < Succ(k)`) from match b {
       Zero => Refl
       Succ(j) => le_false_lt(k, j, h)
     }
@@ -73,30 +75,16 @@ theorem prime_factor_above(
   hp: Prime(p),
   divides: nat_rel!(`p | Succ(factorial(n))`)
 ): nat!(`n < p`) {
-  Or::elim(
-    boolean_cases(Nat::le(p, n)),
-    (outside: Nat::le(p, n) = false) => le_false_lt(p, n, outside),
-    (inside: nat!(`p ≤ n`)) => False::elim(
-      prime_not_divides_one(
-        p,
-        hp,
-        Eq::subst(
-          (x: Nat) => nat_rel!(`p | x`),
-          sub_sum_left(factorial(n), 1),
-          divides_subtract(
-            p,
-            Succ(factorial(n)),
-            factorial(n),
-            divides,
-            divides_factorial(p, n, Nat::lt_of_succ_lt(0, p, prime_gt_one(p, hp)), inside)
-          )
-        )
-      )
-    )
-  )
+  proof!(```
+      Consider whether $nat_bool!(`p ≤ n`) holds.
+        Case above: not($nat_bool!(`p ≤ n`)). By le_false_lt(p, n, above).
+        [below] Case below: $nat_bool!(`p ≤ n`). This contradicts prime_not_divides_one(p, hp).
+      %%
+      [below] Eq::subst($((x: Nat) => nat_rel!(`p | x`)), sub_sum_left(factorial(n), 1), divides_subtract(p, Succ(factorial(n)), factorial(n), divides, divides_factorial(p, n, Nat::lt_of_succ_lt(0, p, prime_gt_one(p, hp)), below)))
+    ```)
 }
 pub fn first_or_two(xs: List(Nat)): Nat {
-  match xs: Nat { Nil => 2
+  ⊢ Nat from match xs { Nil => 2
     Cons(x, rest) => x }
 }
 pub fn prime_above(n: Nat): Nat { first_or_two(factorize(Succ(factorial(n)))) }
@@ -104,14 +92,14 @@ pub(open) inductive AbovePrime(n: Nat, p: Nat): Prop {
   Above(prime: Prime(p), greater: nat!(`n < p`)): AbovePrime(n, p)
 }
 theorem head_prime(p: Nat, rest: List(Nat), h: AllPrime(Cons(p, rest))): Prime(p) {
-  match h: Prime(p) { PrimesCons(x, xs, hp, hr) => hp }
+  ⊢ Prime(p) from match h { PrimesCons(x, xs, hp, hr) => hp }
 }
 theorem factor_head_above(
   n: Nat,
   xs: List(Nat),
   h: Factorization(Succ(factorial(n)), xs)
 ): AbovePrime(n, first_or_two(xs)) {
-  match xs: AbovePrime(n, first_or_two(xs)) {
+  ⊢ AbovePrime(n, first_or_two(xs)) from match xs {
     Nil => False::elim(
       false_ne_true(
         Eq::trans(

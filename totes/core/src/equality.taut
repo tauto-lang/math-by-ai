@@ -1,3 +1,4 @@
+import std::Calc { calc }
 import std::Base
 import "notation.taut"
 
@@ -11,8 +12,9 @@ pub theorem congr2<A, B, C>(
   ab: logic!(`a = b`),
   cd: logic!(`c = d`)
 ): logic!(`f(a, c) = f(b, d)`) {
-  calc logic!(`f(a, c)`) {
-    = logic!(`f(b, c)`) from Eq::congr((x: A) => logic!(`f(x, c)`), ab)
-    = logic!(`f(b, d)`) from Eq::congr((y: B) => logic!(`f(b, y)`), cd)
-  }
+  calc!(```
+    $logic!(`f(a, c)`)
+    = $logic!(`f(b, c)`) from $Eq::congr((x: A) => logic!(`f(x, c)`), ab)
+    = $logic!(`f(b, d)`) from $Eq::congr((y: B) => logic!(`f(b, y)`), cd)
+    ```)
 }

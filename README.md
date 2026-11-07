@@ -3,6 +3,9 @@
 Tauto の数学ライブラリ。モノイド・可換モノイド・群・半環の抽象的な定理を、
 自然数の算術・順序・整除と結び付ける。Euclid の互除法、整数係数の Bézout 等式、
 素数判定、素因数分解の存在と一意性、素数が無限に存在することまで証明する。
+有理数の Dedekind 切断から実数を構成し、対角線論法によって実数の非可算性も証明する。
+可換環と整域、多項式の正規化による環の等式の自動証明 `ring_norm!` を備え、
+整域上の座標平面で平行四辺形の対辺が等しいことを公理なしで証明する。
 
 ## 構成
 
@@ -11,12 +14,20 @@ Tauto の数学ライブラリ。モノイド・可換モノイド・群・半�
 | `core` | `notation`・`highlight` | `logic!`、等式・論理結合子の文法、共有のトークン色付け |
 | `core` | `equality` | 二変数関数の等式の合同性 `congr2` |
 | `core` | `order` | 命題を値にする関係の半順序、反射律・推移律・反対称律、最小元の一意性 |
+| `core` | `functions`・`diagonal` | 単射・全射、二値列の対角線と非可算性 |
+| `core` | `rational_order` | 有理数の狭義順序と、二つの有理数の間にある有理数の構成 |
+| `core` | `real`・`real_nat` | Dedekind 切断、切断の外延的同値、有界な非空族の上限、自然数の単射的な埋め込み |
+| `core` | `interval`・`interval_cut`・`real_diagonal` | 入れ子の有理区間からの切断の構成、各行を避ける対角線論法、実数の非可算性 |
+| `core` | `classical`・`classical_decision` | 証拠付きの命題の判定と、独立した古典的判定公理 |
 | `algebra` | `monoid` | 演算と単位元を引数に取る `Monoid`、結合律・単位律、単位元の一意性、有限積と連結、冪の指数法則、準同型による有限積の保存 |
 | `algebra` | `commutative` | 可換モノイド、四項の交換則、置換による有限積の不変性、積の冪 |
 | `algebra` | `group` | 非可換群、左右消去律、逆元の一意性・二重逆元・積の逆元、方程式の解と一意性 |
 | `algebra` | `semiring` | 加法が可換な半環、左右の有限和への分配、二項式どうしの積の展開 |
 | `algebra` | `notation` | `alg!`、演算を明示するモノイド・群の式、`⋆` と `ε` |
 | `algebra` | `semiring_notation` | `semiring!`、加法・乗法と 0・1 を明示する式 |
+| `algebra` | `ring` | 可換環 `CommRing` と整域 `IntegralDomain`、零との積・負号の法則、加法群・乗法モノイドの取り出し |
+| `algebra` | `ring_norm`・`ring_tactic` | 環の式の正規形と健全性 `ring_norm_eq`、可換環の等式を証明する `ring_norm!` |
+| `algebra` | `ring_notation` | `ring!`、加法・零・負号・乗法・一を明示する式、`+`・`-`・`*`・単項負号 |
 | `nat` | `arithmetic` | 自然数の加法／乗法の可換モノイドと半環、`sum`・`prod` の連結・置換不変性、有限和のスカラー倍 |
 | `nat` | `order` | 自然数の半順序、0 が最小、後者との順序 |
 | `nat` | `divisibility` | 証拠の商を持つ整除関係、推移性、和・積による閉性、0 の整除 |
@@ -33,12 +44,15 @@ Tauto の数学ライブラリ。モノイド・可換モノイド・群・半�
 | `nat` | `relations` | `nat_rel!`、算術式を含む整除・等式・比較 |
 | `nat` | `notation` | `nat!`、自然数の式・等式・比較、`+`・`-`・`*` |
 | `nat` | `integer_notation` | `int!`、整数の式・負号・自然数の埋め込み・符号付き差 |
+| `geometry` | `point` | 環 K 上の座標平面の点 `Point(K)` |
+| `geometry` | `notation` | `geo!`、線分の平行 `∥`・長さの二乗の一致 `≅`、`¬`・`∧` |
+| `geometry` | `parallelogram` | 整域上で、平行四辺形の対辺の長さ（の二乗）が等しいこと |
 
-依存は `nat → algebra → core` に加え、`nat → core`（順序）。標準ライブラリの `Nat` と既存の算術定理を再利用する。
+依存は `nat → algebra → core` に加え、`nat → core`（順序）、`geometry → algebra → core` と `geometry → core`。標準ライブラリの `Nat` と既存の算術定理を再利用する。
 `Monoid(A, op, unit)` は法則の証拠で、加法と乗法を同じ `Nat` に同時に与えられる。
 `map_product` は演算と単位元の保存だけを必要とし、モノイドの法則を余分に要求しない。
 
-ルートの `Tauto.eure` は三つの tote を明示的な path 依存としてまとめた開発用の入口。
+ルートの `Tauto.eure` は四つの tote を明示的な path 依存としてまとめた開発用の入口。
 現行の Totebag に専用の workspace member 宣言はないため、その機能を仮定していない。
 各 tote は自身の manifest から依存を解決でき、math の外の package に依存しない。
 
@@ -55,6 +69,8 @@ Tauto の数学ライブラリ。モノイド・可換モノイド・群・半�
 | `nat::notation` | `nat!` | 自然数の式、`+`・切り捨て減算 `-`・`*`、`=`・`≤`・`<` |
 | `nat::integer_notation` | `int!` | 整数の式、`+`・`-`・`*`・単項負号、`↑`・`diff`、等式・比較 |
 | `nat::relations` | `nat_rel!` | 自然数の算術式どうしの整除・等式・比較 |
+| `algebra::ring_notation` | `ring!` | `加法, 零, 負号, 乗法, 一; 式`、`+`・`-`・`*`・`0`・`1` と等式 |
+| `geometry::notation` | `geo!` | `加法, 零, 負号, 乗法, 一; 関係`、`AB ∥ CD`・`AB ≅ CD`・`¬`・`∧` |
 
 ```taut
 import std::Base
@@ -86,8 +102,8 @@ logic!(`d = 1 ∨ d = p`)
 `*` は `+`・`-` より強く、二項演算は左結合。括弧は式の結合順序を指定し、そのまま展開される。
 `logic!` は `¬`、`=`、`∧`、`∨`、`→` の順に強く、含意は右結合。
 自然数の `a - b` は切り捨て減算、整数の `a - b` は通常の整数減算。
-`int!` 内の数値は整数、`↑a` は自然数 a の整数への埋め込み、`diff(p, n)` は自然数 p と n の符号付き差
-`Int::sub_nat(p, n)` に正確に展開する。`diff(a * p, a * n)` や `↑gcd(a, b)` も書ける。
+`int!` 内の数値は整数、`↑a` は自然数 a の整数への埋め込み、`diff(p, n)` は自然数 p と n の符号付き差（`Int::sub_nat(p, n)`）に正確に展開する。
+`diff(a * p, a * n)` や `↑gcd(a, b)` も書ける。
 整数の式から別の型の関数を呼ぶとき、引数の数値などを自然数として渡す必要があれば `${ ... }` で明示する。
 
 `alg!` の `ε` と、`semiring!` の `0`・`1` はヘッダで指定した値であり、型 A に数値の演算を勝手に導入しない。
@@ -104,22 +120,26 @@ tauto highlight --tokens examples/notation.taut
 tauto run --backend javascript tests/highlight.taut
 ```
 
-このディレクトリで実行する。monorepo では `math-ai/`、公開 repository ではそのルート。
+リポジトリのルートで実行する。
 
 実際の定義・定理・帰納法の途中の命題・合同性のラムダも、この表記で書いている。
-マクロの展開器と、表記と元の項が定義的に一致することを検査するテストの比較先では、元の関数呼び出しを明示している。
+マクロの展開器と、表記と元の項が定義的に一致することを確かめる [examples/notation.taut](examples/notation.taut) の比較先では、元の関数呼び出しを明示している。
 
 実行できる証明例:
 
 - [examples/basic.taut](examples/basic.taut): 最初のモノイドと自然数、互換表記。
 - [examples/advanced.taut](examples/advanced.taut): 群・半環・整除・順序。
 - [examples/number_theory.taut](examples/number_theory.taut): Euclid、Bézout、素因数分解、素数の無限性。
+- [examples/uncountability.taut](examples/uncountability.taut): 二値列と実数の非可算性、`|ℕ| < |ℝ|`。
 - [examples/notation.taut](examples/notation.taut): 全文法の展開・結合順序・Unicode・名前の文脈。
+- [examples/geometry.taut](examples/geometry.taut): `ring_norm!` による環の等式、平行四辺形の対辺。
 
 ## 定理の仮定と範囲
 
 - 群の消去律・積の逆元 `inv(a ⋆ b) = inv(b) ⋆ inv(a)`・方程式の解の一意性は、可換性を仮定しない。
-- 半環の乗法は可換でなくてよい。二項式の展開も乗算の順序を保持する。環や体はまだ定義していない。
+- 半環の乗法は可換でなくてよい。二項式の展開も乗算の順序を保持する。
+- `CommRing` は乗法も可換な環。`ring_norm!` は可換環の証拠を受け取り、両辺の差の正規形が 0 になることを検査する。体はまだ定義していない。
+- 平面幾何は整域上の座標で扱う。平方根がないので長さは二乗で比べ、平行は外積が 0 であることで表す。`parallelogram_opposite_sides` は A・B・D が一直線上にないことを仮定する。
 - `Permutation` は隣接交換・先頭の維持・推移性で生成する証拠。可換モノイドの有限積がその証拠に沿って不変であることを証明する。
 - `Divides(a, b)` は `a * k = b` となる自然数 `k` と等式の証拠を持つ命題。`Prime(p)` は `1 < p` と、すべての約数が 1 または p であることを要求する。
 - `IsLeast` は下界の性質を表し、`least_unique` は候補それぞれの集合への所属も明示的に要求する。
@@ -148,42 +168,78 @@ tauto run --backend javascript tests/highlight.taut
 これらは証明を優先した試し割り実装で、平方根までの探索・篩・高速な整数表現は使っていない。
 特に `prime_above` は階乗を作るため、大きな入力の素数探索に向く実装ではない。
 
+## 実数の非可算性
+
+入口は [examples/uncountability.taut](examples/uncountability.taut) の
+`reals_more_than_naturals`。自然数の埋め込みの単射性と、どの `Nat → Real` も
+すべての実数を列挙できないことを組み合わせている。
+
+`Real` は有理数の Dedekind 切断。下側集合が非空で、全体ではなく、下に閉じ、
+最大元を持たないことを証拠として保持する。同じ切断を表すことは `SameReal` で定義する。
+`CoversReals` はこの同値で列挙の網羅性を判定するので、証拠や関数の表現が異なるだけで
+「列挙できない」と結論していない。有理数の `1/2` と `2/4` のような表現の違いも
+`real_respects_rationals` によって切断の所属に影響しない。
+
+切断の非空族が上に有界なら、その和集合が上限になる。
+`supremum` が切断の四条件を満たし、`supremum_upper` と `supremum_least` が
+上界であることと最小性を証明する。実数の存在・完備性・非可算性を公理として置いていない。
+この証明に必要な実数の構成と順序を扱い、実数の加減乗除はまだ実装していない。
+
+実数側の対角線論法は、小数表示の代わりに有理区間を使う。
+列挙の候補を `rows` として、次のように切断 `d` を作る。
+
+1. `I₀ = [0, 1]` から始める。`Iₙ = [a, b]` の内部に有理数 `m` を選ぶ。
+2. `m` が `rows(n)` の下側集合に属するなら、`Iₙ₊₁ = [a, m]` とする。
+   属さないなら、`m < r < b` となる有理数 `r` を選び、`Iₙ₊₁ = [r, b]` とする。
+3. `d = {q ∈ ℚ | ある n について q < left(Iₙ)}` とする。
+   入れ子性により、これは非空で全体ではない、最大元のない下側集合になる。
+4. 前者の場合 `m` は `rows(n)` に属し `d` に属さない。
+   後者の場合 `m` は `d` に属し `rows(n)` に属さない。
+   よって `d` はすべての行と異なる。
+
+区間の長さが 0 に収束することや、交点の一意性は不要。
+二つの有理数の間の値には媒介数 `(a+c)/(b+d)` を使う。
+`chain_cross` が任意の左端と右端の順序を保証し、`branch_excludes` が一行を避ける議論をまとめる。
+最後の `reals_not_enumerable` は、網羅性を仮定して対角線の所属を取り出すだけになる。
+
+**論理的な前提**: 二値列の `cantor_binary`、切断の構成、上限、自然数の単射性は公理を使わない。
+実数についての `cantor_reals` と `reals_more_than_naturals` は、命題の真偽を証拠付きで選ぶ
+古典的判定原理 `classical_decision : (P : Prop) → Decision(P)` を使う。
+これは [classical_decision.taut](totes/core/src/classical_decision.taut) の一つの明示的な論理公理であり、
+構成的な二値列の証明からは import しない。一般形の `reals_not_enumerable` は判定原理を引数に取り、
+この公理自体には依存しない。検査結果の `axioms: none` と、判定原理を引数に持つことは区別する。
+
+```sh
+tauto check examples/uncountability.taut --fresh --summary
+tauto assumptions examples/uncountability.taut --json
+```
+
+`cantor_binary` の公理一覧は空、実数についての二つの定理の公理一覧は
+`classical_decision` だけになる。
+
 ## 検証
 
 ```sh
-tauto run --backend javascript --allow-read=. --allow-run=cp,tauto tests/check.taut
-tauto check examples/basic.taut --fresh --summary
-tauto assumptions examples/basic.taut --json
-tauto check examples/advanced.taut --fresh --summary
-tauto assumptions examples/advanced.taut --json
-tauto check examples/number_theory.taut --fresh --summary
-tauto assumptions examples/number_theory.taut --json
-tauto check tests/stress.taut --fresh --summary --timeout 30
+tauto check --fresh --summary
+tauto assumptions examples/uncountability.taut --json
+tauto run --backend javascript tests/highlight.taut
+tauto syntax gen --check totes/core/src
 tauto syntax gen --check totes/algebra/src
 tauto syntax gen --check totes/nat/src
+tauto syntax gen --check totes/geometry/src
 ```
 
-このディレクトリで実行する。monorepo では `math-ai/`、公開 repository ではそのルート。検証スクリプトには Node.js と `cp` を使用する。テストはこのディレクトリだけを一時ディレクトリへコピーし、
-全ソースと使用例を fresh check する。その後、偽の等式・壊れた構文に加え、誤った最大公約数・Bézout 係数・素数証明・素因数分解と、減少しない再帰、非可換な演算の勝手な交換、整数と自然数の減算の混同、結合順序の変更の計16件を拒否することを検査する。
-さらに6文法のトークン callback と UTF-8 の範囲を実行時に検査し、実際の `tauto highlight --tokens` の出力も確認する。
-文法の生成表は各 `src/.tauto-syntax/` に含める。`core` の文法も `tauto syntax gen --check totes/core/src` で検査する。
-Tauto 本体の変更・依存の追加は不要。公開先は `tauto-lang/math-by-ai`、配置はリポジトリルートにこのディレクトリの内容を置き、tote は `totes/{core,algebra,nat}`。
+リポジトリのルートで実行する。
+引数なしの `tauto check` は、ルートの package と依存する4つの tote、`examples/`・`tests/` をまとめて fresh check する。
+`tests/stress.taut` の具体値の確認もここに含まれる。`tauto assumptions` で、各定理が使う公理を確認できる。
+`tests/highlight.taut` は6文法のトークン callback と UTF-8 の範囲を実行時に検査する。
+文法の生成表は各 `src/.tauto-syntax/` に含める。
+tote は `totes/{core,algebra,nat,geometry}` に置く。
 
 ## 具体値の負荷確認
 
 `tests/stress.taut` では 100003 の素数性、`gcd(1071, 462) = 21`、360 の素因数分解を検証する。
-2026-11-03 の環境ではこれらと、別途試した 1009・10007 の素数性が検証に通った。
 これらの具体値の確認は、任意入力についての正しさの証明とは別の負荷確認であり、最大入力の保証ではない。
-
-## Tauto 側への改善案
-
-今回の定理群は既存のカーネルで検証できた。実装中に遭遇した書きやすさの問題は次のとおり。
-
-- **マクロの定義検査**: `tauto check notation.taut` だけでは、実際の呼び出しで初めて発見されるマクロ本体の名前・フィールドの誤りがあった。定義時に本体まで検査すると、利用者のファイルで発覚するのを防げる。現在は使用例を必ず検査する。
-- **構造の引数の省略**: `assoc(op, unit, m, a, b, c)` の `op`・`unit` を証拠 `m` から推論できる API があると、式が短くなる。単なる型ごとの instance だけでは自然数の加法と乗法が競合するので、演算を識別する仕組みや構造の束ね方も併せて考えたい。
-- **証明マクロの文脈推論**: 大きな `Eq::trans` の引数内に `nat_norm!` を直接置くと、展開に必要な文脈を作る段階で `c` を推論できない場合があった。正規化の各段階を型の明示された補題に分けると検証できた。
-- **ラムダ内のブロック**: 証明中の `Eq::congr` に渡すラムダの `if` 内で `let` を使うと `not a kernel term: block` になった箇所があり、式を直接書く形で解決した。
-- **複数 tote の一括検証**: workspace の明示的な member と、それらすべてを検査するコマンドがあると、今回のような検証用スクリプトを減らせる。
 
 ## ライセンス
 

@@ -29,7 +29,7 @@ RParen: ')';
 ```, with(tokens: algebra_tokens)) => struct Expr, enum Header, struct Formula, struct Formula_Opt1, struct Product, struct Product_Rep1, enum Atom, struct Reference, struct Arguments, struct Arguments_Rep1, struct Paren, fn parse
 
 pub fn algebra_name(t: SynToken): SynExpr {
-  ExVar(SynIdent { name: t.text, ctx: t.ctx, span: t.span })
+  ExVar(Syn::ident(t))
 }
 
 pub fn algebra_header(a: monoid_notation::Header): SynExpr {

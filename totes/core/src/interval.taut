@@ -1,0 +1,100 @@
+import std::Base
+import std::Rat
+import std::RatLaws
+import "rational_order.taut"
+import std::proof::Lang { proof }
+import std::proof::Forms { proof_by, proof_case }
+
+pub(open) inductive Interval: Type {
+  Between(left: Rat, right: Rat, positive: RationalLt(left, right)): Interval
+}
+pub fn left(i: Interval): Rat { ⊢ Rat from match i { Between(a, b, h) => a } }
+pub fn right(i: Interval): Rat { ⊢ Rat from match i { Between(a, b, h) => b } }
+pub theorem interval_positive(i: Interval): RationalLt(left(i), right(i)) {
+  ⊢ RationalLt(left(i), right(i)) from match i { Between(a, b, h) => h }
+}
+pub fn middle(i: Interval): Rat { rational_between(left(i), right(i)) }
+pub theorem left_middle(i: Interval): RationalLt(left(i), middle(i)) {
+  rational_between_left(left(i), right(i), interval_positive(i))
+}
+pub theorem middle_right(i: Interval): RationalLt(middle(i), right(i)) {
+  rational_between_right(left(i), right(i), interval_positive(i))
+}
+
+pub fn Inside(inner: Interval, outer: Interval): Prop {
+  RatLe(left(outer), left(inner)) ∧ RatLe(right(inner), right(outer))
+}
+pub theorem inside_left(
+  inner: Interval,
+  outer: Interval,
+  h: Inside(inner, outer)
+): RatLe(left(outer), left(inner)) {
+  ⊢ RatLe(left(outer), left(inner)) from match h { AndIntro(a, b) => a }
+}
+pub theorem inside_right(
+  inner: Interval,
+  outer: Interval,
+  h: Inside(inner, outer)
+): RatLe(right(inner), right(outer)) {
+  ⊢ RatLe(right(inner), right(outer)) from match h { AndIntro(a, b) => b }
+}
+
+pub theorem chain_left(
+  boxes: (Nat) -> Interval,
+  nested: (n: Nat) -> Inside(boxes(Succ(n)), boxes(n)),
+  n: Nat
+): RatLe(left(boxes(0)), left(boxes(n))) {
+  proof!(```
+    By induction on n.
+      [zero] Case Zero. By Rat::le_refl.
+      [succ] Case Succ(k). By Rat::le_trans.
+    %%
+    [zero] (left(boxes(0)))
+    [succ] (left(boxes(0)), left(boxes(k)), left(boxes(Succ(k))), ih, inside_left(boxes(Succ(k)), boxes(k), nested(k)))
+  ```)
+}
+pub theorem chain_right(
+  boxes: (Nat) -> Interval,
+  nested: (n: Nat) -> Inside(boxes(Succ(n)), boxes(n)),
+  n: Nat
+): RatLe(right(boxes(n)), right(boxes(0))) {
+  ⊢ RatLe(right(boxes(n)), right(boxes(0))) from match n {
+    Zero => Rat::le_refl(right(boxes(0)))
+    Succ(k) => Rat::le_trans(
+      right(boxes(Succ(k))),
+      right(boxes(k)),
+      right(boxes(0)),
+      inside_right(boxes(Succ(k)), boxes(k), nested(k)),
+      chain_right(boxes, nested, k)
+    )
+  }
+}
+
+// Every left endpoint is below every right endpoint. Dropping the first
+// interval from both indices avoids arithmetic on indices in this proof.
+pub theorem chain_cross(
+  boxes: (Nat) -> Interval,
+  nested: (n: Nat) -> Inside(boxes(Succ(n)), boxes(n)),
+  n: Nat,
+  m: Nat
+): RationalLt(left(boxes(n)), right(boxes(m))) {
+  ⊢ RationalLt(left(boxes(n)), right(boxes(m))) from match n {
+    Zero => rational_le_lt(
+      left(boxes(0)),
+      left(boxes(m)),
+      right(boxes(m)),
+      chain_left(boxes, nested, m),
+      interval_positive(boxes(m))
+    )
+    Succ(k) => ⊢ RationalLt(left(boxes(Succ(k))), right(boxes(m))) from match m {
+      Zero => rational_lt_le_trans(
+        left(boxes(Succ(k))),
+        right(boxes(Succ(k))),
+        right(boxes(0)),
+        interval_positive(boxes(Succ(k))),
+        chain_right(boxes, nested, Succ(k))
+      )
+      Succ(j) => chain_cross((i: Nat) => boxes(Succ(i)), (i: Nat) => nested(Succ(i)), k, j)
+    }
+  }
+}

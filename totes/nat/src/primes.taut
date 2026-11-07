@@ -14,7 +14,7 @@ pub(open) inductive Prime(p: Nat): Prop {
   ): Prime(p)
 }
 pub theorem prime_gt_one(p: Nat, hp: Prime(p)): nat!(`1 < p`) {
-  match hp: nat!(`1 < p`) { PrimeBy(pos, all) => pos }
+  ⊢ nat!(`1 < p`) from match hp { PrimeBy(pos, all) => pos }
 }
 pub theorem prime_divisor(
   p: Nat,
@@ -22,7 +22,7 @@ pub theorem prime_divisor(
   d: Nat,
   h: nat_rel!(`d | p`)
 ): logic!(`d = 1 ∨ d = p`) {
-  match hp: logic!(`d = 1 ∨ d = p`) { PrimeBy(pos, all) => all(d, h) }
+  ⊢ logic!(`d = 1 ∨ d = p`) from match hp { PrimeBy(pos, all) => all(d, h) }
 }
 pub theorem prime_coprime_or_divides(
   p: Nat,

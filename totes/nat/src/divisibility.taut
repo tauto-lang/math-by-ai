@@ -1,8 +1,11 @@
+import std::Calc { calc }
 import std::Base
 import std::Nat
 import std::IntLaws
 import std::NatNorm
 import "notation.taut"
+import std::proof::Lang { proof }
+import std::proof::Forms { proof_by, proof_case, proof_consider, proof_we }
 
 // A proof carries a witness. No quotient computation or Boolean decision is assumed.
 pub(open) inductive Divides(a: Nat, b: Nat): Prop {
@@ -18,18 +21,16 @@ pub theorem divides_trans(
   ab: Divides(a, b),
   bc: Divides(b, c)
 ): Divides(a, c) {
-  match ab: Divides(a, c) {
-    By(k, hk) => match bc: Divides(a, c) {
-      By(l, hl) => By(
-        nat!(`k * l`),
-        calc nat!(`a * (k * l)`) {
-          = nat!(`(a * k) * l`) from Eq::sym(Nat::mul_assoc(a, k, l))
-          = nat!(`b * l`) from Eq::congr((x: Nat) => nat!(`x * l`), hk)
-          = c from hl
-        }
-      )
-    }
-  }
+  proof!(```
+      Consider ab.
+        Case By(k, hk). Consider bc.
+          [step] Case By(l, hl). We have h: $nat!(`a * (k * l)`)
+            = $nat!(`(a * k) * l`) by Nat::mul_assoc(a, k, l)
+            = $nat!(`b * l`) by hk
+            = c by hl. By By.
+      %%
+      [step] (Nat::mul(k, l), h)
+    ```)
 }
 pub theorem divides_add(
   a: Nat,
@@ -38,15 +39,16 @@ pub theorem divides_add(
   ab: Divides(a, b),
   ac: Divides(a, c)
 ): Divides(a, nat!(`b + c`)) {
-  match ab: Divides(a, nat!(`b + c`)) {
-    By(k, hk) => match ac: Divides(a, nat!(`b + c`)) {
+  ⊢ Divides(a, nat!(`b + c`)) from match ab {
+    By(k, hk) => ⊢ Divides(a, nat!(`b + c`)) from match ac {
       By(l, hl) => By(
         nat!(`k + l`),
-        calc nat!(`a * (k + l)`) {
-          = nat!(`a * k + a * l`) from Nat::mul_add_distrib(a, k, l)
-          = nat!(`b + a * l`) from Eq::congr((x: Nat) => nat!(`x + a * l`), hk)
-          = nat!(`b + c`) from Eq::congr((x: Nat) => nat!(`b + x`), hl)
-        }
+        calc!(```
+          $nat!(`a * (k + l)`)
+          = $nat!(`a * k + a * l`) from $Nat::mul_add_distrib(a, k, l)
+          = $nat!(`b + a * l`) from $Eq::congr((x: Nat) => nat!(`x + a * l`), hk)
+          = $nat!(`b + c`) from $Eq::congr((x: Nat) => nat!(`b + x`), hl)
+          ```)
       )
     }
   }
@@ -57,34 +59,37 @@ pub theorem divides_mul_right(
   c: Nat,
   ab: Divides(a, b)
 ): Divides(a, nat!(`b * c`)) {
-  match ab: Divides(a, nat!(`b * c`)) {
+  ⊢ Divides(a, nat!(`b * c`)) from match ab {
     By(k, hk) => By(
       nat!(`k * c`),
-      calc nat!(`a * (k * c)`) {
-        = nat!(`(a * k) * c`) from Eq::sym(Nat::mul_assoc(a, k, c))
-        = nat!(`b * c`) from Eq::congr((x: Nat) => nat!(`x * c`), hk)
-      }
+      calc!(```
+        $nat!(`a * (k * c)`)
+        = $nat!(`(a * k) * c`) from $Eq::sym(Nat::mul_assoc(a, k, c))
+        = $nat!(`b * c`) from $Eq::congr((x: Nat) => nat!(`x * c`), hk)
+        ```)
     )
   }
 }
 pub theorem divides_mul_left(a: Nat, b: Nat, c: Nat, ab: Divides(a, b)): Divides(a, nat!(`c * b`)) {
-  match ab: Divides(a, nat!(`c * b`)) {
+  ⊢ Divides(a, nat!(`c * b`)) from match ab {
     By(k, hk) => By(
       nat!(`k * c`),
-      calc nat!(`a * (k * c)`) {
-        = nat!(`(a * k) * c`) from Eq::sym(Nat::mul_assoc(a, k, c))
-        = nat!(`b * c`) from Eq::congr((x: Nat) => nat!(`x * c`), hk)
-        = nat!(`c * b`) from Nat::mul_comm(b, c)
-      }
+      calc!(```
+        $nat!(`a * (k * c)`)
+        = $nat!(`(a * k) * c`) from $Eq::sym(Nat::mul_assoc(a, k, c))
+        = $nat!(`b * c`) from $Eq::congr((x: Nat) => nat!(`x * c`), hk)
+        = $nat!(`c * b`) from $Nat::mul_comm(b, c)
+        ```)
     )
   }
 }
 pub theorem zero_divides_only_zero(b: Nat, h: Divides(0, b)): nat!(`b = 0`) {
-  match h: nat!(`b = 0`) {
-    By(k, hk) => calc b {
-      = nat!(`0 * k`) from Eq::sym(hk)
-      = nat!(`0`) from Nat::mul_zero_left(k)
-    }
+  ⊢ nat!(`b = 0`) from match h {
+    By(k, hk) => calc!(```
+      $b
+      = $nat!(`0 * k`) from $Eq::sym(hk)
+      = $nat!(`0`) from $Nat::mul_zero_left(k)
+      ```)
   }
 }
 
@@ -99,8 +104,8 @@ pub(open) inductive AllDivisible(a: Nat): (List(Nat)) -> Prop {
 }
 
 pub theorem divides_bound(a: Nat, b: Nat, h: Divides(a, Succ(b))): nat!(`a ≤ Succ(b)`) {
-  match h: nat!(`a ≤ Succ(b)`) {
-    By(k, hk) => match k: nat!(`a ≤ Succ(b)`) {
+  ⊢ nat!(`a ≤ Succ(b)`) from match h {
+    By(k, hk) => ⊢ nat!(`a ≤ Succ(b)`) from match k {
       Zero => False::elim(Nat::zero_ne_succ(b, Eq::trans(Eq::sym(Nat::mul_zero_right(a)), hk)))
       Succ(j) => Eq::subst(
         (x: Nat) => nat!(`a ≤ x`),
@@ -115,9 +120,9 @@ pub theorem divides_bound(a: Nat, b: Nat, h: Divides(a, Succ(b))): nat!(`a ≤ S
   }
 }
 pub theorem divides_antisym(a: Nat, b: Nat, ab: Divides(a, b), ba: Divides(b, a)): nat!(`a = b`) {
-  match b: nat!(`a = b`) {
+  ⊢ nat!(`a = b`) from match b {
     Zero => zero_divides_only_zero(a, ba)
-    Succ(k) => match a: nat!(`a = Succ(k)`) {
+    Succ(k) => ⊢ nat!(`a = Succ(k)`) from match a {
       Zero => False::elim(Nat::zero_ne_succ(k, Eq::sym(zero_divides_only_zero(Succ(k), ab))))
       Succ(j) => Nat::le_antisym(
         Succ(j),

@@ -1,0 +1,14 @@
+import std::Base
+
+// Membership in an image carries its preimage and its equality proof.
+pub(open) inductive InImage(A: Type, B: Type, f: (A) -> B, y: B): Prop {
+  ImageOf(x: A, equality: f(x) = y): InImage(A, B, f, y)
+}
+
+pub fn Surjective<A, B>(f: (A) -> B): Prop {
+  (y: B) -> InImage(A, B, f, y)
+}
+
+pub fn Injective<A, B>(f: (A) -> B): Prop {
+  (x: A, y: A, equality: f(x) = f(y)) -> x = y
+}

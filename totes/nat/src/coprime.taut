@@ -1,3 +1,4 @@
+import std::Calc { calc }
 import std::Base
 import std::Nat
 import std::NatNorm
@@ -38,15 +39,16 @@ pub theorem balance_scaled(
   coeff: Coefficients,
   h: balance(a, b, g, coeff)
 ): balance(nat!(`a * c`), nat!(`b * c`), nat!(`g * c`), coeff) {
-  match coeff: balance(nat!(`a * c`), nat!(`b * c`), nat!(`g * c`), coeff) {
-    Coeff(pa, na, pb, nb) => calc nat!(`g * c + (a * c * na + b * c * nb)`) {
-      = nat!(`(g + (a * na + b * nb)) * c`) from Eq::sym(scale_left(a, b, g, c, na, nb))
-      = nat!(`(a * pa + b * pb) * c`) from Eq::congr((x: Nat) => nat!(`x * c`), h)
-      = nat!(`a * c * pa + b * c * pb`) from scale_right(a, b, c, pa, pb)
-    }
+  ⊢ balance(nat!(`a * c`), nat!(`b * c`), nat!(`g * c`), coeff) from match coeff {
+    Coeff(pa, na, pb, nb) => calc!(```
+      $nat!(`g * c + (a * c * na + b * c * nb)`)
+      = $nat!(`(g + (a * na + b * nb)) * c`) from $Eq::sym(scale_left(a, b, g, c, na, nb))
+      = $nat!(`(a * pa + b * pb) * c`) from $Eq::congr((x: Nat) => nat!(`x * c`), h)
+      = $nat!(`a * c * pa + b * c * pb`) from $scale_right(a, b, c, pa, pb)
+      ```)
   }
 }
-// A divisor of both inputs divides any value represented by a balanced combination.
+// A common divisor of a and b divides the balanced value g.
 pub theorem divides_balance(
   a: Nat,
   b: Nat,
@@ -57,20 +59,21 @@ pub theorem divides_balance(
   da: nat_rel!(`d | a`),
   db: nat_rel!(`d | b`)
 ): nat_rel!(`d | g`) {
-  match coeff: nat_rel!(`d | g`) {
+  ⊢ nat_rel!(`d | g`) from match coeff {
     Coeff(pa, na, pb, nb) => Eq::subst(
       (x: Nat) => nat_rel!(`d | x`),
-      calc nat!(`(a * pa + b * pb) - (a * na + b * nb)`) {
-        = nat!(`(g + (a * na + b * nb)) - (a * na + b * nb)`) from Eq::congr(
+      calc!(```
+        $nat!(`(a * pa + b * pb) - (a * na + b * nb)`)
+        = $nat!(`(g + (a * na + b * nb)) - (a * na + b * nb)`) from $Eq::congr(
           (x: Nat) => nat!(`x - (a * na + b * nb)`),
           Eq::sym(h)
         )
-        = nat!(`((a * na + b * nb) + g) - (a * na + b * nb)`) from Eq::congr(
+        = $nat!(`((a * na + b * nb) + g) - (a * na + b * nb)`) from $Eq::congr(
           (x: Nat) => nat!(`x - (a * na + b * nb)`),
           Nat::add_comm(g, nat!(`a * na + b * nb`))
         )
-        = g from sub_sum_left(nat!(`a * na + b * nb`), g)
-      },
+        = $g from $sub_sum_left(nat!(`a * na + b * nb`), g)
+        ```),
       divides_subtract(
         d,
         nat!(`a * pa + b * pb`),
@@ -104,10 +107,11 @@ pub theorem coprime_common_multiple(
 ): nat_rel!(`d | c`) {
   Eq::subst(
     (x: Nat) => nat_rel!(`d | x`),
-    calc nat!(`gcd(a, b) * c`) {
-      = nat!(`1 * c`) from Eq::congr((x: Nat) => nat!(`x * c`), h)
-      = c from Nat::mul_one_left(c)
-    },
+    calc!(```
+      $nat!(`gcd(a, b) * c`)
+      = $nat!(`1 * c`) from $Eq::congr((x: Nat) => nat!(`x * c`), h)
+      = $c from $Nat::mul_one_left(c)
+      ```),
     divides_balance(
       nat!(`a * c`),
       nat!(`b * c`),

@@ -1,3 +1,4 @@
+import std::Calc { calc }
 import std::Base
 import "semiring_notation.taut"
 import "monoid.taut"
@@ -29,7 +30,7 @@ pub theorem semiring_additive<A>(
   one: A,
   s: Semiring(A, add, zero, mul, one)
 ): CommMonoid(A, add, zero) {
-  match s: CommMonoid(A, add, zero) { Mk(a, m, l, r, zl, zr) => a }
+  ⊢ CommMonoid(A, add, zero) from match s { Mk(a, m, l, r, zl, zr) => a }
 }
 pub theorem semiring_multiplicative<A>(
   add: (A, A) -> A,
@@ -38,7 +39,7 @@ pub theorem semiring_multiplicative<A>(
   one: A,
   s: Semiring(A, add, zero, mul, one)
 ): Monoid(A, mul, one) {
-  match s: Monoid(A, mul, one) { Mk(a, m, l, r, zl, zr) => m }
+  ⊢ Monoid(A, mul, one) from match s { Mk(a, m, l, r, zl, zr) => m }
 }
 pub theorem distribute_left<A>(
   add: (A, A) -> A,
@@ -50,9 +51,9 @@ pub theorem distribute_left<A>(
   b: A,
   c: A
 ): semiring!(`add, zero, mul, one; a * (b + c) = a * b + a * c`) {
-  match s: semiring!(
-    `add, zero, mul, one; a * (b + c) = a * b + a * c`
-  ) { Mk(am, mm, l, r, zl, zr) => l(a, b, c) }
+  ⊢ semiring!(`add, zero, mul, one; a * (b + c) = a * b + a * c`) from match s {
+    Mk(am, mm, l, r, zl, zr) => l(a, b, c)
+  }
 }
 pub theorem distribute_right<A>(
   add: (A, A) -> A,
@@ -64,9 +65,9 @@ pub theorem distribute_right<A>(
   b: A,
   c: A
 ): semiring!(`add, zero, mul, one; (a + b) * c = a * c + b * c`) {
-  match s: semiring!(
-    `add, zero, mul, one; (a + b) * c = a * c + b * c`
-  ) { Mk(am, mm, l, r, zl, zr) => r(a, b, c) }
+  ⊢ semiring!(`add, zero, mul, one; (a + b) * c = a * c + b * c`) from match s {
+    Mk(am, mm, l, r, zl, zr) => r(a, b, c)
+  }
 }
 pub theorem annihilate_left<A>(
   add: (A, A) -> A,
@@ -76,7 +77,7 @@ pub theorem annihilate_left<A>(
   s: Semiring(A, add, zero, mul, one),
   a: A
 ): semiring!(`add, zero, mul, one; 0 * a = 0`) {
-  match s: semiring!(`add, zero, mul, one; 0 * a = 0`) { Mk(am, mm, l, r, zl, zr) => zl(a) }
+  ⊢ semiring!(`add, zero, mul, one; 0 * a = 0`) from match s { Mk(am, mm, l, r, zl, zr) => zl(a) }
 }
 pub theorem annihilate_right<A>(
   add: (A, A) -> A,
@@ -86,7 +87,7 @@ pub theorem annihilate_right<A>(
   s: Semiring(A, add, zero, mul, one),
   a: A
 ): semiring!(`add, zero, mul, one; a * 0 = 0`) {
-  match s: semiring!(`add, zero, mul, one; a * 0 = 0`) { Mk(am, mm, l, r, zl, zr) => zr(a) }
+  ⊢ semiring!(`add, zero, mul, one; a * 0 = 0`) from match s { Mk(am, mm, l, r, zl, zr) => zr(a) }
 }
 pub theorem mul_sum_left<A>(
   add: (A, A) -> A,
@@ -96,9 +97,11 @@ pub theorem mul_sum_left<A>(
   s: Semiring(A, add, zero, mul, one),
   a: A,
   xs: List(A)
-): semiring!(
-  `add, zero, mul, one; a * product(add, 0, xs)`
-) = product(add, zero, map_list((x: A) => semiring!(`add, zero, mul, one; a * x`), xs)) {
+): semiring!(`add, zero, mul, one; a * product(add, 0, xs)`) = product(
+  add,
+  zero,
+  map_list((x: A) => semiring!(`add, zero, mul, one; a * x`), xs)
+) {
   map_product(
     add,
     zero,
@@ -118,9 +121,11 @@ pub theorem mul_sum_right<A>(
   s: Semiring(A, add, zero, mul, one),
   a: A,
   xs: List(A)
-): semiring!(
-  `add, zero, mul, one; product(add, 0, xs) * a`
-) = product(add, zero, map_list((x: A) => semiring!(`add, zero, mul, one; x * a`), xs)) {
+): semiring!(`add, zero, mul, one; product(add, 0, xs) * a`) = product(
+  add,
+  zero,
+  map_list((x: A) => semiring!(`add, zero, mul, one; x * a`), xs)
+) {
   map_product(
     add,
     zero,
@@ -144,8 +149,9 @@ pub theorem expand_product<A>(
   c: A,
   d: A
 ): semiring!(`add, zero, mul, one; (a + b) * (c + d) = a * c + a * d + (b * c + b * d)`) {
-  calc semiring!(`add, zero, mul, one; (a + b) * (c + d)`) {
-    = semiring!(`add, zero, mul, one; a * (c + d) + b * (c + d)`) from distribute_right(
+  calc!(```
+    $semiring!(`add, zero, mul, one; (a + b) * (c + d)`)
+    = $semiring!(`add, zero, mul, one; a * (c + d) + b * (c + d)`) from $distribute_right(
       add,
       zero,
       mul,
@@ -155,13 +161,13 @@ pub theorem expand_product<A>(
       b,
       semiring!(`add, zero, mul, one; c + d`)
     )
-    = semiring!(`add, zero, mul, one; a * c + a * d + b * (c + d)`) from Eq::congr(
+    = $semiring!(`add, zero, mul, one; a * c + a * d + b * (c + d)`) from $Eq::congr(
       (v: A) => semiring!(`add, zero, mul, one; v + b * (c + d)`),
       distribute_left(add, zero, mul, one, s, a, c, d)
     )
-    = semiring!(`add, zero, mul, one; a * c + a * d + (b * c + b * d)`) from Eq::congr(
+    = $semiring!(`add, zero, mul, one; a * c + a * d + (b * c + b * d)`) from $Eq::congr(
       (v: A) => semiring!(`add, zero, mul, one; a * c + a * d + v`),
       distribute_left(add, zero, mul, one, s, b, c, d)
     )
-  }
+    ```)
 }

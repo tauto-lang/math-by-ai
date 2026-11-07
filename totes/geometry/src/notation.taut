@@ -1,0 +1,129 @@
+import std::Base
+import std::prelude::Macro
+import core::highlight
+import "point.taut"
+
+pub fn geo_tokens(ts: List(SynTok)): List(SynHighlight) ! {Div} { math_tokens(ts) }
+
+// `geo!(`add, zero, neg, mul, one; AB ∥ DC ∧ ¬(AB ∥ AD)`)`: statements about
+// points of the plane over a ring, written with the ring's operations so that
+// `ring_norm!` reads them. A point is a capital letter naming a variable of
+// type `Point(K)`, and a segment is two of them, `AB` from A to B.
+//
+// - `AB ∥ CD`: the cross product of B - A and D - C is 0.
+// - `AB ≅ CD`: the two squared lengths are the same (no square roots in a ring).
+// - `¬ R`: R is false. `R ∧ S`: both.
+syntax!(geo_notation, ```par
+%start Expr
+%title "plane geometry"
+%%
+Expr: Header Comma Header Comma Header Comma Header Comma Header Semi Formula;
+Header: Name | Embed;
+Formula: Clause { Conj Clause };
+Clause: Negation | Relation | Group;
+Negation: Not Clause;
+Group: LParen Formula RParen;
+Relation: Segment RelOp Segment;
+RelOp: Parallel | Congruent;
+Embed: TautoExpr;
+Name: /[a-z_][_\p{L}\p{N}']*(::[_\p{L}][_\p{L}\p{N}']*)*/;
+Segment: /[A-Z][A-Z]/;
+Parallel: '∥';
+Congruent: '≅';
+Not: '¬';
+Conj: '∧';
+Comma: ',';
+Semi: ';';
+LParen: '(';
+RParen: ')';
+```, with(tokens: geo_tokens)) => struct Expr, enum Header, struct Formula, struct Formula_Rep1, enum Clause, struct Negation, struct Group, struct Relation, enum RelOp, fn parse
+
+pub(open) struct GeoSyn { add: SynExpr, zero: SynExpr, neg: SynExpr, mul: SynExpr, one: SynExpr }
+
+pub fn geo_header(h: geo_notation::Header): SynExpr {
+  match h {
+    Name(t) => ExVar(Syn::ident(t))
+    Embed(e) => e
+  }
+}
+
+// The `i`-th letter of a segment, as the variable of that point.
+pub fn geo_point(t: SynToken, i: u64): SynExpr ! {macro_error} {
+  match Text::slice(t.text, i, i + 1) {
+    None => Syn::error(t.span, "geo!: a segment is two capital letters")
+    Some(c) => ExVar(Syn::ident(SynToken { text: c, span: t.span, ctx: t.ctx }))
+  }
+}
+
+// `a - b` in the ring.
+pub fn geo_sub(o: GeoSyn, a: SynExpr, b: SynExpr): SynExpr {
+  let add := o.add
+  let neg := o.neg
+  quote { $add($a, $neg($b)) }
+}
+
+// The two coordinates of the vector of a segment, from its first point to its second.
+pub fn geo_vector(o: GeoSyn, t: SynToken): SynExpr × SynExpr ! {macro_error} {
+  let p := geo_point(t, 0)
+  let q := geo_point(t, 1)
+  #(geo_sub(o, quote { px($q) }, quote { px($p) }), geo_sub(o, quote { py($q) }, quote { py($p) }))
+}
+
+pub fn geo_relation(o: GeoSyn, r: geo_notation::Relation): SynExpr ! {macro_error} {
+  match geo_vector(o, r.segment) {
+    #(u1, u2) => match geo_vector(o, r.segment_2) {
+      #(v1, v2) => {
+        let add := o.add
+        let neg := o.neg
+        let mul := o.mul
+        let zero := o.zero
+        match r.rel_op {
+          Parallel(t) => quote { $add($mul($u1, $v2), $neg($mul($u2, $v1))) = $zero }
+          Congruent(t) => quote {
+            $add($mul($u1, $u1), $mul($u2, $u2)) = $add($mul($v1, $v1), $mul($v2, $v2))
+          }
+        }
+      }
+    }
+  }
+}
+
+pub fn geo_clause(o: GeoSyn, c: geo_notation::Clause): SynExpr ! {macro_error, Div} {
+  match c {
+    Negation(n) => {
+      let p := geo_clause(o, n.clause)
+      quote { ($p) -> False }
+    }
+    Group(g) => geo_formula(o, g.formula)
+    Relation(r) => geo_relation(o, r)
+  }
+}
+
+pub fn geo_conjuncts(
+  o: GeoSyn,
+  acc: SynExpr,
+  xs: List(geo_notation::Formula_Rep1)
+): SynExpr ! {macro_error, Div} {
+  match xs {
+    Nil => acc
+    Cons(x, rest) => {
+      let b := geo_clause(o, x.clause)
+      geo_conjuncts(o, quote { $acc ∧ $b }, rest)
+    }
+  }
+}
+
+pub fn geo_formula(o: GeoSyn, f: geo_notation::Formula): SynExpr ! {macro_error, Div} {
+  geo_conjuncts(o, geo_clause(o, f.clause), f.rep)
+}
+
+pub macro fn geo(e: geo_notation::Expr): SynExpr ! {macro_error, Div} {
+  let o := GeoSyn {
+    add: geo_header(e.header),
+    zero: geo_header(e.header_2),
+    neg: geo_header(e.header_3),
+    mul: geo_header(e.header_4),
+    one: geo_header(e.header_5)
+  }
+  geo_formula(o, e.formula)
+}

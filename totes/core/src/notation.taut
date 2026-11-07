@@ -33,7 +33,7 @@ RParen: ')';
   struct Arguments, struct Arguments_Rep1, struct Paren, struct Negation, fn parse
 
 pub fn logic_name(t: SynToken): SynExpr {
-  ExVar(SynIdent { name: t.text, ctx: t.ctx, span: t.span })
+  ExVar(Syn::ident(t))
 }
 pub fn logic_args(xs: List(logic_notation::Arguments_Rep1)): List(SynExpr) ! {macro_error, Div} {
   match xs { Nil => Nil

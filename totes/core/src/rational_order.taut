@@ -1,0 +1,151 @@
+import std::Base
+import std::Rat
+import std::Int
+import std::RatLaws
+import std::IntOrder
+import std::IntLaws
+
+// Strict order on rational VALUES, independent of fraction representations.
+pub fn RationalLt(a: Rat, b: Rat): Prop { ¬RatLe(b, a) }
+
+pub theorem rational_lt_irrefl(a: Rat): ¬RationalLt(a, a) {
+  (h: RationalLt(a, a)) => h(Rat::le_refl(a))
+}
+
+pub theorem rational_lt_le(a: Rat, b: Rat, h: RationalLt(a, b)): RatLe(a, b) {
+  ⊢ RatLe(a, b) from match Rat::le_total(a, b) {
+    OrInl(ab) => ab
+    OrInr(ba) => False::elim(h(ba))
+  }
+}
+
+pub theorem rational_lt_trans(
+  a: Rat,
+  b: Rat,
+  c: Rat,
+  ab: RationalLt(a, b),
+  bc: RationalLt(b, c)
+): RationalLt(a, c) {
+  (ca: RatLe(c, a)) => ab(Rat::le_trans(b, c, a, rational_lt_le(b, c, bc), ca))
+}
+
+pub theorem rational_le_lt(
+  a: Rat,
+  b: Rat,
+  c: Rat,
+  ab: RatLe(a, b),
+  bc: RationalLt(b, c)
+): RationalLt(a, c) {
+  (ca: RatLe(c, a)) => bc(Rat::le_trans(c, a, b, ca, ab))
+}
+
+pub theorem rational_lt_le_trans(
+  a: Rat,
+  b: Rat,
+  c: Rat,
+  ab: RationalLt(a, b),
+  bc: RatLe(b, c)
+): RationalLt(a, c) {
+  (ca: RatLe(c, a)) => ab(Rat::le_trans(b, c, a, bc, ca))
+}
+
+pub theorem integer_le_add_cancel(
+  x: Int,
+  y: Int,
+  z: Int,
+  h: IntLe(Int::add(x, z), Int::add(y, z))
+): IntLe(x, y) {
+  let ex: Int::add(
+    Int::add(x, z),
+    Int::neg(z)
+  ) = x := by int_norm!(): Int::add(Int::add(x, z), Int::neg(z)) = x {}
+  let ey: Int::add(
+    Int::add(y, z),
+    Int::neg(z)
+  ) = y := by int_norm!(): Int::add(Int::add(y, z), Int::neg(z)) = y {}
+  Int::le_rw(
+    Int::add(Int::add(x, z), Int::neg(z)),
+    x,
+    Int::add(Int::add(y, z), Int::neg(z)),
+    y,
+    ex,
+    ey,
+    Int::le_add(Int::add(x, z), Int::add(y, z), Int::neg(z), h)
+  )
+}
+
+// The mediant (a+c)/(b+d) lies strictly between a/b and c/d.
+// Using it instead of a midpoint keeps the arithmetic proof small.
+pub fn rational_between(x: Rat, y: Rat): Rat {
+  ⊢ Rat from match x {
+    Mk(a, p) => ⊢ Rat from match y {
+      Mk(b, q) => Rat::Mk(Int::add(a, b), Succ(Nat::add(p, q)))
+    }
+  }
+}
+
+pub theorem rational_between_left(
+  x: Rat,
+  y: Rat,
+  h: RationalLt(x, y)
+): RationalLt(x, rational_between(x, y)) {
+  ⊢ RationalLt(x, rational_between(x, y)) from match x {
+    Mk(a, p) => ⊢ RationalLt(Rat::Mk(a, p), rational_between(Rat::Mk(a, p), y)) from match y {
+      Mk(b, q) => (bad: RatLe(rational_between(Rat::Mk(a, p), Rat::Mk(b, q)), Rat::Mk(a, p))) => h(
+        integer_le_add_cancel(
+          Int::mul(b, IntOfNat(Succ(p))),
+          Int::mul(a, IntOfNat(Succ(q))),
+          Int::mul(a, IntOfNat(Succ(p))),
+          Int::le_rw(
+            Int::mul(Int::add(a, b), IntOfNat(Succ(p))),
+            Int::add(Int::mul(b, IntOfNat(Succ(p))), Int::mul(a, IntOfNat(Succ(p)))),
+            Int::mul(a, IntOfNat(Succ(Succ(Nat::add(p, q))))),
+            Int::add(Int::mul(a, IntOfNat(Succ(q))), Int::mul(a, IntOfNat(Succ(p)))),
+            by int_norm!(): Int::mul(
+              Int::add(a, b),
+              IntOfNat(Succ(p))
+            ) = Int::add(Int::mul(b, IntOfNat(Succ(p))), Int::mul(a, IntOfNat(Succ(p)))) {},
+            by int_norm!(): Int::mul(
+              a,
+              IntOfNat(Succ(Succ(Nat::add(p, q))))
+            ) = Int::add(Int::mul(a, IntOfNat(Succ(q))), Int::mul(a, IntOfNat(Succ(p)))) {},
+            bad
+          )
+        )
+      )
+    }
+  }
+}
+
+pub theorem rational_between_right(
+  x: Rat,
+  y: Rat,
+  h: RationalLt(x, y)
+): RationalLt(rational_between(x, y), y) {
+  ⊢ RationalLt(rational_between(x, y), y) from match x {
+    Mk(a, p) => ⊢ RationalLt(rational_between(Rat::Mk(a, p), y), y) from match y {
+      Mk(b, q) => (bad: RatLe(Rat::Mk(b, q), rational_between(Rat::Mk(a, p), Rat::Mk(b, q)))) => h(
+        integer_le_add_cancel(
+          Int::mul(b, IntOfNat(Succ(p))),
+          Int::mul(a, IntOfNat(Succ(q))),
+          Int::mul(b, IntOfNat(Succ(q))),
+          Int::le_rw(
+            Int::mul(b, IntOfNat(Succ(Succ(Nat::add(p, q))))),
+            Int::add(Int::mul(b, IntOfNat(Succ(p))), Int::mul(b, IntOfNat(Succ(q)))),
+            Int::mul(Int::add(a, b), IntOfNat(Succ(q))),
+            Int::add(Int::mul(a, IntOfNat(Succ(q))), Int::mul(b, IntOfNat(Succ(q)))),
+            by int_norm!(): Int::mul(
+              b,
+              IntOfNat(Succ(Succ(Nat::add(p, q))))
+            ) = Int::add(Int::mul(b, IntOfNat(Succ(p))), Int::mul(b, IntOfNat(Succ(q)))) {},
+            by int_norm!(): Int::mul(
+              Int::add(a, b),
+              IntOfNat(Succ(q))
+            ) = Int::add(Int::mul(a, IntOfNat(Succ(q))), Int::mul(b, IntOfNat(Succ(q)))) {},
+            bad
+          )
+        )
+      )
+    }
+  }
+}

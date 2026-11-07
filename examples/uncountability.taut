@@ -1,0 +1,29 @@
+import std::Base
+import core::functions
+import core::diagonal
+import core::real
+import core::real_nat
+import core::real_diagonal
+import core::classical_decision
+
+// The short, constructive diagonal proof: the n-th bit defeats row n.
+pub theorem cantor_binary(rows: (Nat) -> (Nat) -> Bool): ¬Surjective(rows) {
+  binary_sequences_uncountable(rows)
+}
+
+// Dedekind cuts give actual real numbers. At step n, keep an interval
+// on the opposite side of a rational separator from rows(n). Its lower
+// endpoints define a cut that differs from every row.
+pub theorem cantor_reals(rows: (Nat) -> Real): ¬CoversReals(rows) {
+  reals_not_enumerable(rows, classical_decision)
+}
+
+// The embedding is injective even after identifying equal cuts.
+// No enumeration covers all real values. Together these express |N| < |R|.
+pub theorem reals_more_than_naturals(): (
+  (
+    (n: Nat, m: Nat, same: SameReal(natural_real(n), natural_real(m))) -> n = m
+  ) ∧ ((rows: (Nat) -> Real) -> ¬CoversReals(rows))
+) {
+  AndIntro(natural_real_injective, cantor_reals)
+}

@@ -34,7 +34,7 @@ RParen: ')';
   enum Atom, struct Reference, struct Arguments, struct Arguments_Rep1, struct Paren, fn parse
 
 pub fn nat_name(t: SynToken): SynExpr {
-  ExVar(SynIdent { name: t.text, ctx: t.ctx, span: t.span })
+  ExVar(Syn::ident(t))
 }
 pub fn nat_arguments(
   first: nat_notation::Expr,
@@ -104,6 +104,24 @@ pub fn nat_expression(e: nat_notation::Expr): SynExpr ! {macro_error, Div} {
       }
     }
   }
+}
+// The Bool test behind a relation, for `Consider whether $nat_bool!(`p ≤ n`) holds.`
+pub fn nat_bool_expression(e: nat_notation::Expr): SynExpr ! {macro_error, Div} {
+  let l := nat_sum(e.sum)
+  match e.opt {
+    None => l
+    Some(r) => {
+      let b := nat_sum(r.sum)
+      match r.relation {
+        EqOp(tok) => quote { Nat::eq($l, $b) }
+        LeOp(tok) => quote { Nat::le($l, $b) }
+        LtOp(tok) => quote { Nat::lt($l, $b) }
+      }
+    }
+  }
+}
+pub macro fn nat_bool(e: nat_notation::Expr): SynExpr ! {macro_error, Div} {
+  nat_bool_expression(e)
 }
 pub macro fn nat(e: nat_notation::Expr): SynExpr ! {macro_error, Div} { nat_expression(e) }
 // Compatibility name for existing users; the grammar now also accepts terms.

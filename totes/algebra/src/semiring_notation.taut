@@ -32,7 +32,7 @@ RParen: ')';
 
 pub fn semiring_name(
   t: SynToken
-): SynExpr { ExVar(SynIdent { name: t.text, ctx: t.ctx, span: t.span }) }
+): SynExpr { ExVar(Syn::ident(t)) }
 pub fn semiring_header(h: semiring_notation::Header): SynExpr {
   match h { Name(t) => semiring_name(t)
     Embed(e) => e }

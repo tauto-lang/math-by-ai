@@ -1,0 +1,185 @@
+import std::Base
+import std::Rat
+import std::Int
+import std::RatLaws
+import "classical.taut"
+import "functions.taut"
+import "rational_order.taut"
+import "real.taut"
+import "interval.taut"
+import "interval_cut.taut"
+
+pub fn decision_flag(P: Prop, d: Decision(P)): Bool {
+  ⊢ Bool from match d {
+    Yes(h) => true
+    No(h) => false
+  }
+}
+
+// If the old real contains the middle, keep the left interval.
+// Otherwise move strictly to its right. Both choices leave a real gap.
+pub fn branch(box: Interval, take_left: Bool): Interval {
+  ⊢ Interval from match take_left {
+    true => Between(left(box), middle(box), left_middle(box))
+    false => Between(
+      rational_between(middle(box), right(box)),
+      right(box),
+      rational_between_right(middle(box), right(box), middle_right(box))
+    )
+  }
+}
+
+pub theorem branch_inside(box: Interval, take_left: Bool): Inside(branch(box, take_left), box) {
+  ⊢ Inside(branch(box, take_left), box) from match take_left {
+    true => AndIntro(
+      Rat::le_refl(left(box)),
+      rational_lt_le(middle(box), right(box), middle_right(box))
+    )
+    false => AndIntro(
+      rational_lt_le(
+        left(box),
+        rational_between(middle(box), right(box)),
+        rational_lt_trans(
+          left(box),
+          middle(box),
+          rational_between(middle(box), right(box)),
+          left_middle(box),
+          rational_between_left(middle(box), right(box), middle_right(box))
+        )
+      ),
+      Rat::le_refl(right(box))
+    )
+  }
+}
+
+pub fn Excludes(x: Real, box: Interval): Prop {
+  (
+    y: Real,
+    covers_lower: (q: Rat, lt: RationalLt(q, left(box))) -> below(y, q),
+    avoids_upper: ¬below(y, right(box))
+  ) -> ¬SameReal(x, y)
+}
+
+pub theorem branch_excludes(
+  x: Real,
+  box: Interval,
+  d: Decision(below(x, middle(box)))
+): Excludes(x, branch(box, decision_flag(below(x, middle(box)), d))) {
+  ⊢ Excludes(x, branch(box, decision_flag(below(x, middle(box)), d))) from match d {
+    Yes(member) => (y: Real, low: (q: Rat, lt: RationalLt(q, left(box))) -> below(y, q), high: ¬below(y, middle(box))) => (same: SameReal(x, y)) => ⊢ False from match same {
+      AndIntro(xy, yx) => high(xy(middle(box), member))
+    }
+    No(outside) => (y: Real, low: (q: Rat, lt: RationalLt(q, rational_between(middle(box), right(box)))) -> below(y, q), high: ¬below(y, right(box))) => (same: SameReal(x, y)) => ⊢ False from match same {
+      AndIntro(xy, yx) => outside(
+        yx(
+          middle(box),
+          low(middle(box), rational_between_left(middle(box), right(box), middle_right(box)))
+        )
+      )
+    }
+  }
+}
+
+pub fn unit_interval(): Interval {
+  Between(
+    Rat::of_nat(0),
+    Rat::of_nat(1),
+    (bad: RatLe(Rat::of_nat(1), Rat::of_nat(0))) => false_ne_true(bad)
+  )
+}
+
+pub fn diagonal_intervals(rows: (Nat) -> Real, decide: (P: Prop) -> Decision(P), n: Nat): Interval {
+  ⊢ Interval from match n {
+    Zero => unit_interval()
+    Succ(k) => branch(
+      diagonal_intervals(rows, decide, k),
+      decision_flag(
+        below(rows(k), middle(diagonal_intervals(rows, decide, k))),
+        decide(below(rows(k), middle(diagonal_intervals(rows, decide, k))))
+      )
+    )
+  }
+}
+
+pub theorem diagonal_nested(
+  rows: (Nat) -> Real,
+  decide: (P: Prop) -> Decision(P),
+  n: Nat
+): Inside(diagonal_intervals(rows, decide, Succ(n)), diagonal_intervals(rows, decide, n)) {
+  branch_inside(
+    diagonal_intervals(rows, decide, n),
+    decision_flag(
+      below(rows(n), middle(diagonal_intervals(rows, decide, n))),
+      decide(below(rows(n), middle(diagonal_intervals(rows, decide, n))))
+    )
+  )
+}
+
+pub theorem diagonal_inhabited(
+  rows: (Nat) -> Real,
+  decide: (P: Prop) -> Decision(P)
+): ∃ q: Rat. interval_lower((n: Nat) => diagonal_intervals(rows, decide, n), q) {
+  ExIntro(
+    Rat::of_int(IntNegSucc(0)),
+    ExIntro(0, (bad: RatLe(Rat::of_nat(0), Rat::of_int(IntNegSucc(0)))) => false_ne_true(bad))
+  )
+}
+
+pub fn real_diagonal(rows: (Nat) -> Real, decide: (P: Prop) -> Decision(P)): Real {
+  interval_real(
+    (n: Nat) => diagonal_intervals(rows, decide, n),
+    (n: Nat) => diagonal_nested(rows, decide, n),
+    diagonal_inhabited(rows, decide)
+  )
+}
+
+pub theorem real_diagonal_differs(
+  rows: (Nat) -> Real,
+  decide: (P: Prop) -> Decision(P),
+  n: Nat
+): ¬SameReal(rows(n), real_diagonal(rows, decide)) {
+  branch_excludes(
+    rows(n),
+    diagonal_intervals(rows, decide, n),
+    decide(below(rows(n), middle(diagonal_intervals(rows, decide, n)))),
+    real_diagonal(rows, decide),
+    (q: Rat, lt: RationalLt(q, left(diagonal_intervals(rows, decide, Succ(n))))) => ExIntro(
+      Succ(n),
+      lt
+    ),
+    interval_cut_bounded(
+      (k: Nat) => diagonal_intervals(rows, decide, k),
+      (k: Nat) => diagonal_nested(rows, decide, k),
+      Succ(n)
+    )
+  )
+}
+
+// Covers quantifies over real values, so alternative representations of
+// a cut cannot turn an incomplete enumeration into a complete one.
+pub fn CoversReals(rows: (Nat) -> Real): Prop {
+  (x: Real) -> (∃ n: Nat. SameReal(rows(n), x))
+}
+
+pub theorem reals_not_enumerable(
+  rows: (Nat) -> Real,
+  decide: (P: Prop) -> Decision(P)
+): ¬CoversReals(rows) {
+  (covers: CoversReals(rows)) => ⊢ False from match covers(real_diagonal(rows, decide)) {
+    ExIntro(n, same) => real_diagonal_differs(rows, decide, n, same)
+  }
+}
+
+pub theorem reals_uncountable(
+  rows: (Nat) -> Real,
+  decide: (P: Prop) -> Decision(P)
+): ¬Surjective(rows) {
+  (onto: Surjective(rows)) => ⊢ False from match onto(real_diagonal(rows, decide)) {
+    ImageOf(n, h) => real_diagonal_differs(
+      rows,
+      decide,
+      n,
+      Eq::subst((x: Real) => SameReal(rows(n), x), h, same_real_refl(rows(n)))
+    )
+  }
+}

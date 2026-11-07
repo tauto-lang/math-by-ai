@@ -1,0 +1,375 @@
+import std::Base
+import "monoid.taut"
+import "commutative.taut"
+import "group.taut"
+
+// A commutative ring: an abelian group under `add`, a commutative monoid under
+// `mul`, and `mul` distributing over `add`. The other laws (`a * 0 = 0`,
+// `(-a) * b = -(a * b)`, distribution on the right) follow; they are below.
+pub(open) inductive CommRing(
+  A: Type,
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A
+): Prop {
+  Mk(
+    additive: Group(A, add, zero, neg),
+    add_comm: (a: A, b: A) -> add(a, b) = add(b, a),
+    multiplicative: Monoid(A, mul, one),
+    mul_comm: (a: A, b: A) -> mul(a, b) = mul(b, a),
+    distrib: (a: A, b: A, c: A) -> mul(a, add(b, c)) = add(mul(a, b), mul(a, c))
+  ): CommRing(A, add, zero, neg, mul, one)
+}
+
+// A commutative ring where `1 ≠ 0` and a product is 0 only when a factor is.
+pub(open) inductive IntegralDomain(
+  A: Type,
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A
+): Prop {
+  Mk(
+    ring: CommRing(A, add, zero, neg, mul, one),
+    nontrivial: (one = zero) -> False,
+    no_zero_divisors: (a: A, b: A, h: mul(a, b) = zero) -> a = zero ∨ b = zero
+  ): IntegralDomain(A, add, zero, neg, mul, one)
+}
+
+pub theorem domain_ring<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  d: IntegralDomain(A, add, zero, neg, mul, one)
+): CommRing(A, add, zero, neg, mul, one) {
+  ⊢ CommRing(A, add, zero, neg, mul, one) from match d { Mk(r, n, z) => r }
+}
+pub theorem domain_nontrivial<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  d: IntegralDomain(A, add, zero, neg, mul, one)
+): (one = zero) -> False {
+  ⊢ (one = zero) -> False from match d { Mk(r, n, z) => n }
+}
+pub theorem domain_no_zero_divisors<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  d: IntegralDomain(A, add, zero, neg, mul, one),
+  a: A,
+  b: A,
+  h: mul(a, b) = zero
+): a = zero ∨ b = zero {
+  ⊢ a = zero ∨ b = zero from match d { Mk(r, n, z) => z(a, b, h) }
+}
+
+pub theorem ring_group<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  r: CommRing(A, add, zero, neg, mul, one)
+): Group(A, add, zero, neg) {
+  ⊢ Group(A, add, zero, neg) from match r { Mk(g, ac, m, mc, d) => g }
+}
+pub theorem ring_add_comm<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  r: CommRing(A, add, zero, neg, mul, one),
+  a: A,
+  b: A
+): add(a, b) = add(b, a) {
+  ⊢ add(a, b) = add(b, a) from match r { Mk(g, ac, m, mc, d) => ac(a, b) }
+}
+pub theorem ring_mul_monoid<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  r: CommRing(A, add, zero, neg, mul, one)
+): Monoid(A, mul, one) {
+  ⊢ Monoid(A, mul, one) from match r { Mk(g, ac, m, mc, d) => m }
+}
+pub theorem ring_mul_comm<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  r: CommRing(A, add, zero, neg, mul, one),
+  a: A,
+  b: A
+): mul(a, b) = mul(b, a) {
+  ⊢ mul(a, b) = mul(b, a) from match r { Mk(g, ac, m, mc, d) => mc(a, b) }
+}
+pub theorem ring_distrib_left<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  r: CommRing(A, add, zero, neg, mul, one),
+  a: A,
+  b: A,
+  c: A
+): mul(a, add(b, c)) = add(mul(a, b), mul(a, c)) {
+  ⊢ mul(a, add(b, c)) = add(mul(a, b), mul(a, c)) from match r { Mk(g, ac, m, mc, d) => d(a, b, c) }
+}
+
+pub theorem ring_add_monoid<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  r: CommRing(A, add, zero, neg, mul, one)
+): Monoid(A, add, zero) {
+  group_monoid(add, zero, neg, ring_group(add, zero, neg, mul, one, r))
+}
+pub theorem ring_add_comm_monoid<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  r: CommRing(A, add, zero, neg, mul, one)
+): CommMonoid(A, add, zero) {
+  CommMonoid::Mk(
+    ring_add_monoid(add, zero, neg, mul, one, r),
+    (a: A, b: A) => ring_add_comm(add, zero, neg, mul, one, r, a, b)
+  )
+}
+pub theorem ring_mul_comm_monoid<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  r: CommRing(A, add, zero, neg, mul, one)
+): CommMonoid(A, mul, one) {
+  CommMonoid::Mk(
+    ring_mul_monoid(add, zero, neg, mul, one, r),
+    (a: A, b: A) => ring_mul_comm(add, zero, neg, mul, one, r, a, b)
+  )
+}
+
+pub theorem ring_distrib_right<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  r: CommRing(A, add, zero, neg, mul, one),
+  a: A,
+  b: A,
+  c: A
+): mul(add(a, b), c) = add(mul(a, c), mul(b, c)) {
+  Eq::trans(
+    ring_mul_comm(add, zero, neg, mul, one, r, add(a, b), c),
+    Eq::trans(
+      ring_distrib_left(add, zero, neg, mul, one, r, c, a, b),
+      Eq::trans(
+        Eq::congr(⟦add(□, mul(c, b))⟧, ring_mul_comm(add, zero, neg, mul, one, r, c, a)),
+        Eq::congr(⟦add(mul(a, c), □)⟧, ring_mul_comm(add, zero, neg, mul, one, r, c, b))
+      )
+    )
+  )
+}
+
+pub theorem ring_mul_zero<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  r: CommRing(A, add, zero, neg, mul, one),
+  a: A
+): mul(a, zero) = zero {
+  let g := ring_group(add, zero, neg, mul, one, r)
+  let m := ring_add_monoid(add, zero, neg, mul, one, r)
+  // a * 0 + a * 0 = a * (0 + 0) = a * 0 = a * 0 + 0
+  cancel_left(
+    add,
+    zero,
+    neg,
+    g,
+    mul(a, zero),
+    mul(a, zero),
+    zero,
+    Eq::trans(
+      Eq::sym(ring_distrib_left(add, zero, neg, mul, one, r, a, zero, zero)),
+      Eq::trans(
+        Eq::congr(⟦mul(a, □)⟧, left_unit(add, zero, m, zero)),
+        Eq::sym(right_unit(add, zero, m, mul(a, zero)))
+      )
+    )
+  )
+}
+pub theorem ring_zero_mul<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  r: CommRing(A, add, zero, neg, mul, one),
+  a: A
+): mul(zero, a) = zero {
+  Eq::trans(
+    ring_mul_comm(add, zero, neg, mul, one, r, zero, a),
+    ring_mul_zero(add, zero, neg, mul, one, r, a)
+  )
+}
+
+// `(-a) * b = -(a * b)`: `a * b + (-a) * b = (a + -a) * b = 0 * b = 0`.
+pub theorem ring_neg_mul<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  r: CommRing(A, add, zero, neg, mul, one),
+  a: A,
+  b: A
+): mul(neg(a), b) = neg(mul(a, b)) {
+  let g := ring_group(add, zero, neg, mul, one, r)
+  inverse_unique(
+    add,
+    zero,
+    neg,
+    g,
+    mul(a, b),
+    mul(neg(a), b),
+    Eq::trans(
+      Eq::sym(ring_distrib_right(add, zero, neg, mul, one, r, a, neg(a), b)),
+      Eq::trans(
+        Eq::congr(⟦mul(□, b)⟧, inverse_right(add, zero, neg, g, a)),
+        ring_zero_mul(add, zero, neg, mul, one, r, b)
+      )
+    )
+  )
+}
+pub theorem ring_mul_neg<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  r: CommRing(A, add, zero, neg, mul, one),
+  a: A,
+  b: A
+): mul(a, neg(b)) = neg(mul(a, b)) {
+  Eq::trans(
+    ring_mul_comm(add, zero, neg, mul, one, r, a, neg(b)),
+    Eq::trans(
+      ring_neg_mul(add, zero, neg, mul, one, r, b, a),
+      Eq::congr(⟦neg(□)⟧, ring_mul_comm(add, zero, neg, mul, one, r, b, a))
+    )
+  )
+}
+pub theorem ring_neg_neg<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  r: CommRing(A, add, zero, neg, mul, one),
+  a: A
+): neg(neg(a)) = a {
+  inverse_involution(add, zero, neg, ring_group(add, zero, neg, mul, one, r), a)
+}
+pub theorem ring_neg_zero<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  r: CommRing(A, add, zero, neg, mul, one)
+): neg(zero) = zero {
+  inverse_unit(add, zero, neg, ring_group(add, zero, neg, mul, one, r))
+}
+pub theorem ring_neg_add<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  r: CommRing(A, add, zero, neg, mul, one),
+  a: A,
+  b: A
+): neg(add(a, b)) = add(neg(a), neg(b)) {
+  Eq::trans(
+    inverse_product(add, zero, neg, ring_group(add, zero, neg, mul, one, r), a, b),
+    ring_add_comm(add, zero, neg, mul, one, r, neg(b), neg(a))
+  )
+}
+
+// `a + -b = 0` makes `a = b`.
+pub theorem ring_eq_of_sub<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  r: CommRing(A, add, zero, neg, mul, one),
+  a: A,
+  b: A,
+  h: add(a, neg(b)) = zero
+): a = b {
+  let g := ring_group(add, zero, neg, mul, one, r)
+  // -b = -a, so a = --a = --b = b.
+  Eq::trans(
+    Eq::sym(ring_neg_neg(add, zero, neg, mul, one, r, a)),
+    Eq::trans(
+      Eq::congr(⟦neg(□)⟧, Eq::sym(inverse_unique(add, zero, neg, g, a, neg(b), h))),
+      ring_neg_neg(add, zero, neg, mul, one, r, b)
+    )
+  )
+}
+
+// In a domain, a nonzero factor cancels: `a * k = b * k` and `k ≠ 0` make `a = b`.
+pub theorem domain_cancel<A>(
+  add: (A, A) -> A,
+  zero: A,
+  neg: (A) -> A,
+  mul: (A, A) -> A,
+  one: A,
+  d: IntegralDomain(A, add, zero, neg, mul, one),
+  a: A,
+  b: A,
+  k: A,
+  nonzero: (k = zero) -> False,
+  h: mul(a, k) = mul(b, k)
+): a = b {
+  let r := domain_ring(add, zero, neg, mul, one, d)
+  let g := ring_group(add, zero, neg, mul, one, r)
+  // (a + -b) * k = a * k + -(b * k) = b * k + -(b * k) = 0
+  let product: mul(
+    add(a, neg(b)),
+    k
+  ) = zero := Eq::trans(
+    ring_distrib_right(add, zero, neg, mul, one, r, a, neg(b), k),
+    Eq::trans(
+      Eq::congr(⟦add(mul(a, k), □)⟧, ring_neg_mul(add, zero, neg, mul, one, r, b, k)),
+      Eq::trans(Eq::congr(⟦add(□, neg(mul(b, k)))⟧, h), inverse_right(add, zero, neg, g, mul(b, k)))
+    )
+  )
+  ⊢ a = b from match domain_no_zero_divisors(add, zero, neg, mul, one, d, add(a, neg(b)), k, product) {
+    OrInl(diff) => ring_eq_of_sub(add, zero, neg, mul, one, r, a, b, diff)
+    OrInr(kz) => False::elim(nonzero(kz))
+  }
+}

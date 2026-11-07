@@ -1,0 +1,138 @@
+import std::Base
+import std::prelude::Macro
+import core::highlight
+
+pub fn ring_tokens(ts: List(SynTok)): List(SynHighlight) ! {Div} { math_tokens(ts) }
+
+// `ring!(`add, zero, neg, mul, one; a * (b - c) = a * b - a * c`)`: the
+// expressions of a ring; `a - b` is accepted and read as `a + -b`.
+syntax!(ring_notation, ```par
+%start Expr
+%title "ring expressions"
+%%
+Expr: Header Comma Header Comma Header Comma Header Comma Header Semi Formula;
+Header: Name | Embed;
+Formula: Sum [ Equals Sum ];
+Sum: Prod { AddOp Prod };
+AddOp: Plus | Minus;
+Prod: Unary { Star Unary };
+Unary: Negated | Atom;
+Negated: Minus Unary;
+Atom: ZeroLit | OneLit | Reference | Paren | Embed;
+Reference: Name [ Arguments ];
+Arguments: LParen Sum { Comma Sum } RParen;
+Paren: LParen Sum RParen;
+Embed: TautoExpr;
+Name: /[_\p{L}][_\p{L}\p{N}']*(::[_\p{L}][_\p{L}\p{N}']*)*/;
+ZeroLit: '0';
+OneLit: '1';
+Plus: '+';
+Minus: '-';
+Star: '*';
+Comma: ',';
+Semi: ';';
+Equals: '=';
+LParen: '(';
+RParen: ')';
+```, with(tokens: ring_tokens)) => struct Expr, enum Header, struct Formula, struct Formula_Opt1, struct Sum, struct Sum_Rep1, enum AddOp, struct Prod, struct Prod_Rep1, enum Unary, struct Negated, enum Atom, struct Reference, struct Arguments, struct Arguments_Rep1, struct Paren, fn parse
+
+// The operations, in the order of the header.
+pub(open) struct RingSyn { add: SynExpr, zero: SynExpr, neg: SynExpr, mul: SynExpr, one: SynExpr }
+
+pub fn ring_header(h: ring_notation::Header): SynExpr {
+  match h {
+    Name(t) => ExVar(Syn::ident(t))
+    Embed(e) => e
+  }
+}
+pub fn ring_atom(t: ring_notation::Atom, o: RingSyn): SynExpr ! {macro_error, Div} {
+  match t {
+    ZeroLit(tok) => o.zero
+    OneLit(tok) => o.one
+    Embed(e) => e
+    Paren(p) => ring_sum(p.sum, o)
+    Reference(r) => match r.arguments {
+      None => ExVar(Syn::ident(r.name))
+      Some(args) => ExApp(
+        ExVar(Syn::ident(r.name)),
+        Cons(ring_sum(args.sum, o), ring_args(args.rep, o)),
+        r.span
+      )
+    }
+  }
+}
+pub fn ring_args(
+  xs: List(ring_notation::Arguments_Rep1),
+  o: RingSyn
+): List(SynExpr) ! {macro_error, Div} {
+  match xs {
+    Nil => Nil
+    Cons(x, rest) => Cons(ring_sum(x.sum, o), ring_args(rest, o))
+  }
+}
+pub fn ring_unary(u: ring_notation::Unary, o: RingSyn): SynExpr ! {macro_error, Div} {
+  match u {
+    Negated(n) => {
+      let neg := o.neg
+      let a := ring_unary(n.unary, o)
+      quote { $neg($a) }
+    }
+    Atom(a) => ring_atom(a, o)
+  }
+}
+pub fn ring_factors(
+  acc: SynExpr,
+  xs: List(ring_notation::Prod_Rep1),
+  o: RingSyn
+): SynExpr ! {macro_error, Div} {
+  match xs {
+    Nil => acc
+    Cons(x, rest) => {
+      let mul := o.mul
+      let b := ring_unary(x.unary, o)
+      ring_factors(quote { $mul($acc, $b) }, rest, o)
+    }
+  }
+}
+pub fn ring_product(p: ring_notation::Prod, o: RingSyn): SynExpr ! {macro_error, Div} {
+  ring_factors(ring_unary(p.unary, o), p.rep, o)
+}
+pub fn ring_summands(
+  acc: SynExpr,
+  xs: List(ring_notation::Sum_Rep1),
+  o: RingSyn
+): SynExpr ! {macro_error, Div} {
+  match xs {
+    Nil => acc
+    Cons(x, rest) => {
+      let add := o.add
+      let neg := o.neg
+      let b := ring_product(x.prod, o)
+      let next := match x.add_op {
+        Plus(t) => quote { $add($acc, $b) }
+        Minus(t) => quote { $add($acc, $neg($b)) }
+      }
+      ring_summands(next, rest, o)
+    }
+  }
+}
+pub fn ring_sum(s: ring_notation::Sum, o: RingSyn): SynExpr ! {macro_error, Div} {
+  ring_summands(ring_product(s.prod, o), s.rep, o)
+}
+pub macro fn ring(e: ring_notation::Expr): SynExpr ! {macro_error, Div} {
+  let o := RingSyn {
+    add: ring_header(e.header),
+    zero: ring_header(e.header_2),
+    neg: ring_header(e.header_3),
+    mul: ring_header(e.header_4),
+    one: ring_header(e.header_5)
+  }
+  let left := ring_sum(e.formula.sum, o)
+  match e.formula.opt {
+    None => left
+    Some(r) => {
+      let right := ring_sum(r.sum, o)
+      quote { $left = $right }
+    }
+  }
+}

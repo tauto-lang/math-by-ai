@@ -17,13 +17,13 @@ pub(open) inductive FactorWitness(n: Nat, d: Nat): Prop {
   ): FactorWitness(n, d)
 }
 pub theorem factor_product(n: Nat, d: Nat, h: FactorWitness(n, d)): nat!(`d * quotient(n, d) = n`) {
-  match h: nat!(`d * quotient(n, d) = n`) { Witness(pos, ne, eq) => eq }
+  ⊢ nat!(`d * quotient(n, d) = n`) from match h { Witness(pos, ne, eq) => eq }
 }
 pub theorem factor_positive(n: Nat, d: Nat, h: FactorWitness(n, d)): nat!(`1 < d`) {
-  match h: nat!(`1 < d`) { Witness(pos, ne, eq) => pos }
+  ⊢ nat!(`1 < d`) from match h { Witness(pos, ne, eq) => pos }
 }
 pub theorem factor_proper(n: Nat, d: Nat, h: FactorWitness(n, d)): Nat::eq(d, n) = false {
-  match h: Nat::eq(d, n) = false { Witness(pos, ne, eq) => ne }
+  ⊢ Nat::eq(d, n) = false from match h { Witness(pos, ne, eq) => ne }
 }
 theorem test_equal(
   n: Nat,
@@ -56,9 +56,9 @@ theorem test_nonzero(
   )
 }
 pub theorem bad_test_factor(n: Nat, d: Nat, bad: divisor_test(n, d) = false): FactorWitness(n, d) {
-  match d: FactorWitness(n, d) {
+  ⊢ FactorWitness(n, d) from match d {
     Zero => False::elim(true_ne_false(bad))
-    Succ(k) => match k: FactorWitness(n, Succ(k)) {
+    Succ(k) => ⊢ FactorWitness(n, Succ(k)) from match k {
       Zero => False::elim(true_ne_false(bad))
       Succ(j) => Or::elim(
         boolean_cases(Nat::eq(Succ(Succ(j)), n)),
@@ -103,7 +103,7 @@ theorem quotient_positive_of(
   product: nat!(`d * q = n`),
   proper: Nat::eq(d, n) = false
 ): nat!(`1 < q`) {
-  match q: nat!(`1 < q`) {
+  ⊢ nat!(`1 < q`) from match q {
     Zero => False::elim(
       false_ne_true(
         Eq::trans(
@@ -112,7 +112,7 @@ theorem quotient_positive_of(
         )
       )
     )
-    Succ(k) => match k: nat!(`1 < Succ(k)`) {
+    Succ(k) => ⊢ nat!(`1 < Succ(k)`) from match k {
       Zero => False::elim(
         true_ne_false(
           Eq::trans(
@@ -142,7 +142,7 @@ pub theorem factor_quotient_positive(
   quotient_positive_of(n, d, quotient(n, d), pos, factor_product(n, d, h), factor_proper(n, d, h))
 }
 theorem add_positive(a: Nat, b: Nat, h: nat!(`0 < b`)): nat!(`a < a + b`) {
-  match a: nat!(`a < a + b`) {
+  ⊢ nat!(`a < a + b`) from match a {
     Zero => Eq::trans(Eq::congr((x: Nat) => Nat::lt(0, x), Nat::add_zero_left(b)), h)
     Succ(k) => Eq::trans(
       Eq::congr((x: Nat) => Nat::lt(Succ(k), x), Nat::add_succ_left(k, b)),
@@ -170,11 +170,11 @@ theorem quotient_smaller_of(
   hq: nat!(`1 < q`),
   product: nat!(`d * q = n`)
 ): nat!(`q < n`) {
-  match d: nat!(`q < n`) {
+  ⊢ nat!(`q < n`) from match d {
     Zero => False::elim(false_ne_true(hd))
-    Succ(k) => match k: nat!(`q < n`) {
+    Succ(k) => ⊢ nat!(`q < n`) from match k {
       Zero => False::elim(false_ne_true(hd))
-      Succ(j) => match q: nat!(`q < n`) {
+      Succ(j) => ⊢ nat!(`q < n`) from match q {
         Zero => False::elim(false_ne_true(hq))
         Succ(i) => Eq::subst(
           (x: Nat) => nat!(`Succ(i) < x`),
