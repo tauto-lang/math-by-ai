@@ -1,5 +1,13 @@
 # math
 
+## 📖 [ドキュメントを読む → tauto-lang.github.io/math-by-ai](https://tauto-lang.github.io/math-by-ai/)
+
+全モジュールのソースを、名前から定義へ飛べる形で読める:
+[core](https://tauto-lang.github.io/math-by-ai/core/) ·
+[algebra](https://tauto-lang.github.io/math-by-ai/algebra/) ·
+[nat](https://tauto-lang.github.io/math-by-ai/nat/) ·
+[geometry](https://tauto-lang.github.io/math-by-ai/geometry/)
+
 Tauto の数学ライブラリ。モノイド・可換モノイド・群・半環の抽象的な定理を、
 自然数の算術・順序・整除と結び付ける。Euclid の互除法、整数係数の Bézout 等式、
 素数判定、素因数分解の存在と一意性、素数が無限に存在することまで証明する。
