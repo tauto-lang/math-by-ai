@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/highlight.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/highlight.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::prelude::Macro
+<a class="ln" id="L2" href="#L2">2</a>
+<a class="ln" id="L3" href="#L3">3</a><span class="com">// Keep scanner offsets in UTF-8 bytes. Leave embedded Tauto expressions</span>
+<a class="ln" id="L4" href="#L4">4</a><span class="com">// unclassified here rather than painting their contents as one DSL token.</span>
+<a class="ln" id="L5" href="#L5">5</a><span class="kw">pub</span> <span class="kw">fn</span> math_token_kind(t: SynTok): Option(Text) ! {Div} {
+<a class="ln" id="L6" href="#L6">6</a>  <span class="kw">if</span> t.skipped || t.kind == <span class="str">&quot;TautoExpr&quot;</span> { None } <span class="kw">else</span> {
+<a class="ln" id="L7" href="#L7">7</a>    <span class="kw">if</span> t.kind == <span class="str">&quot;Diff&quot;</span> { Some(<span class="str">&quot;function&quot;</span>) } <span class="kw">else</span> {
+<a class="ln" id="L8" href="#L8">8</a>      <span class="kw">if</span> t.text == <span class="str">&quot;ε&quot;</span> || t.kind == <span class="str">&quot;Identity&quot;</span> || t.kind == <span class="str">&quot;ZeroLit&quot;</span> || t.kind == <span class="str">&quot;OneLit&quot;</span> {
+<a class="ln" id="L9" href="#L9">9</a>        Some(<span class="str">&quot;enumMember&quot;</span>)
+<a class="ln" id="L10" href="#L10">10</a>      } <span class="kw">else</span> {
+<a class="ln" id="L11" href="#L11">11</a>        <span class="kw">if</span> t.kind == <span class="str">&quot;Name&quot;</span> { Some(<span class="str">&quot;variable&quot;</span>) } <span class="kw">else</span> {
+<a class="ln" id="L12" href="#L12">12</a>          <span class="kw">if</span> t.kind == <span class="str">&quot;Num&quot;</span> { Some(<span class="str">&quot;number&quot;</span>) } <span class="kw">else</span> { Some(<span class="str">&quot;operator&quot;</span>) }
+<a class="ln" id="L13" href="#L13">13</a>        }
+<a class="ln" id="L14" href="#L14">14</a>      }
+<a class="ln" id="L15" href="#L15">15</a>    }
+<a class="ln" id="L16" href="#L16">16</a>  }
+<a class="ln" id="L17" href="#L17">17</a>}
+<a class="ln" id="L18" href="#L18">18</a><span class="kw">pub</span> <span class="kw">fn</span> next_is_call(ts: List(SynTok)): Bool ! {Div} {
+<a class="ln" id="L19" href="#L19">19</a>  <span class="kw">match</span> ts {
+<a class="ln" id="L20" href="#L20">20</a>    Nil =&gt; <span class="kw">false</span>
+<a class="ln" id="L21" href="#L21">21</a>    Cons(t, rest) =&gt; <span class="kw">if</span> t.skipped { <a href="#L18">next_is_call</a>(rest) } <span class="kw">else</span> { t.text == <span class="str">&quot;(&quot;</span> }
+<a class="ln" id="L22" href="#L22">22</a>  }
+<a class="ln" id="L23" href="#L23">23</a>}
+<a class="ln" id="L24" href="#L24">24</a><span class="kw">pub</span> <span class="kw">fn</span> math_tokens(ts: List(SynTok)): List(SynHighlight) ! {Div} {
+<a class="ln" id="L25" href="#L25">25</a>  <span class="kw">match</span> ts {
+<a class="ln" id="L26" href="#L26">26</a>    Nil =&gt; Nil
+<a class="ln" id="L27" href="#L27">27</a>    Cons(t, rest) =&gt; <span class="kw">match</span> <a href="#L5">math_token_kind</a>(t) {
+<a class="ln" id="L28" href="#L28">28</a>      None =&gt; <a href="#L24">math_tokens</a>(rest)
+<a class="ln" id="L29" href="#L29">29</a>      Some(kind) =&gt; {
+<a class="ln" id="L30" href="#L30">30</a>        <span class="kw">let</span> semantic := <span class="kw">if</span> t.kind == <span class="str">&quot;Name&quot;</span> &amp;&amp; next_is_call(rest) { <span class="str">&quot;function&quot;</span> } <span class="kw">else</span> { kind }
+<a class="ln" id="L31" href="#L31">31</a>        Cons(SynHighlight { start: t.start, end: t.end, kind: semantic }, math_tokens(rest))
+<a class="ln" id="L32" href="#L32">32</a>      }
+<a class="ln" id="L33" href="#L33">33</a>    }
+<a class="ln" id="L34" href="#L34">34</a>  }
+<a class="ln" id="L35" href="#L35">35</a>}
+</code></pre>
+</html>

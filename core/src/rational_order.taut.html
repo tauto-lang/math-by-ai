@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/rational_order.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/rational_order.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::Base
+<a class="ln" id="L2" href="#L2">2</a><span class="kw">import</span> std::Rat
+<a class="ln" id="L3" href="#L3">3</a><span class="kw">import</span> std::Int
+<a class="ln" id="L4" href="#L4">4</a><span class="kw">import</span> std::RatLaws
+<a class="ln" id="L5" href="#L5">5</a><span class="kw">import</span> std::IntOrder
+<a class="ln" id="L6" href="#L6">6</a><span class="kw">import</span> std::IntLaws
+<a class="ln" id="L7" href="#L7">7</a>
+<a class="ln" id="L8" href="#L8">8</a><span class="com">// Strict order on rational VALUES, independent of fraction representations.</span>
+<a class="ln" id="L9" href="#L9">9</a><span class="kw">pub</span> <span class="kw">fn</span> RationalLt(a: Rat, b: Rat): Prop { ¬RatLe(b, a) }
+<a class="ln" id="L10" href="#L10">10</a>
+<a class="ln" id="L11" href="#L11">11</a><span class="kw">pub</span> <span class="kw">theorem</span> rational_lt_irrefl(a: Rat): ¬<a href="#L9">RationalLt</a>(a, a) {
+<a class="ln" id="L12" href="#L12">12</a>  (h: RationalLt(a, a)) =&gt; h(Rat::le_refl(a))
+<a class="ln" id="L13" href="#L13">13</a>}
+<a class="ln" id="L14" href="#L14">14</a>
+<a class="ln" id="L15" href="#L15">15</a><span class="kw">pub</span> <span class="kw">theorem</span> rational_lt_le(a: Rat, b: Rat, h: <a href="#L9">RationalLt</a>(a, b)): RatLe(a, b) {
+<a class="ln" id="L16" href="#L16">16</a>  ⊢ RatLe(a, b) <span class="kw">from</span> <span class="kw">match</span> Rat::le_total(a, b) {
+<a class="ln" id="L17" href="#L17">17</a>    OrInl(ab) =&gt; ab
+<a class="ln" id="L18" href="#L18">18</a>    OrInr(ba) =&gt; False::elim(h(ba))
+<a class="ln" id="L19" href="#L19">19</a>  }
+<a class="ln" id="L20" href="#L20">20</a>}
+<a class="ln" id="L21" href="#L21">21</a>
+<a class="ln" id="L22" href="#L22">22</a><span class="kw">pub</span> <span class="kw">theorem</span> rational_lt_trans(
+<a class="ln" id="L23" href="#L23">23</a>  a: Rat,
+<a class="ln" id="L24" href="#L24">24</a>  b: Rat,
+<a class="ln" id="L25" href="#L25">25</a>  c: Rat,
+<a class="ln" id="L26" href="#L26">26</a>  ab: <a href="#L9">RationalLt</a>(a, b),
+<a class="ln" id="L27" href="#L27">27</a>  bc: <a href="#L9">RationalLt</a>(b, c)
+<a class="ln" id="L28" href="#L28">28</a>): <a href="#L9">RationalLt</a>(a, c) {
+<a class="ln" id="L29" href="#L29">29</a>  (ca: RatLe(c, a)) =&gt; ab(Rat::le_trans(b, c, a, <a href="#L15">rational_lt_le</a>(b, c, bc), ca))
+<a class="ln" id="L30" href="#L30">30</a>}
+<a class="ln" id="L31" href="#L31">31</a>
+<a class="ln" id="L32" href="#L32">32</a><span class="kw">pub</span> <span class="kw">theorem</span> rational_le_lt(
+<a class="ln" id="L33" href="#L33">33</a>  a: Rat,
+<a class="ln" id="L34" href="#L34">34</a>  b: Rat,
+<a class="ln" id="L35" href="#L35">35</a>  c: Rat,
+<a class="ln" id="L36" href="#L36">36</a>  ab: RatLe(a, b),
+<a class="ln" id="L37" href="#L37">37</a>  bc: <a href="#L9">RationalLt</a>(b, c)
+<a class="ln" id="L38" href="#L38">38</a>): <a href="#L9">RationalLt</a>(a, c) {
+<a class="ln" id="L39" href="#L39">39</a>  (ca: RatLe(c, a)) =&gt; bc(Rat::le_trans(c, a, b, ca, ab))
+<a class="ln" id="L40" href="#L40">40</a>}
+<a class="ln" id="L41" href="#L41">41</a>
+<a class="ln" id="L42" href="#L42">42</a><span class="kw">pub</span> <span class="kw">theorem</span> rational_lt_le_trans(
+<a class="ln" id="L43" href="#L43">43</a>  a: Rat,
+<a class="ln" id="L44" href="#L44">44</a>  b: Rat,
+<a class="ln" id="L45" href="#L45">45</a>  c: Rat,
+<a class="ln" id="L46" href="#L46">46</a>  ab: <a href="#L9">RationalLt</a>(a, b),
+<a class="ln" id="L47" href="#L47">47</a>  bc: RatLe(b, c)
+<a class="ln" id="L48" href="#L48">48</a>): <a href="#L9">RationalLt</a>(a, c) {
+<a class="ln" id="L49" href="#L49">49</a>  (ca: RatLe(c, a)) =&gt; ab(Rat::le_trans(b, c, a, bc, ca))
+<a class="ln" id="L50" href="#L50">50</a>}
+<a class="ln" id="L51" href="#L51">51</a>
+<a class="ln" id="L52" href="#L52">52</a><span class="kw">pub</span> <span class="kw">theorem</span> integer_le_add_cancel(
+<a class="ln" id="L53" href="#L53">53</a>  x: Int,
+<a class="ln" id="L54" href="#L54">54</a>  y: Int,
+<a class="ln" id="L55" href="#L55">55</a>  z: Int,
+<a class="ln" id="L56" href="#L56">56</a>  h: IntLe(Int::add(x, z), Int::add(y, z))
+<a class="ln" id="L57" href="#L57">57</a>): IntLe(x, y) {
+<a class="ln" id="L58" href="#L58">58</a>  <span class="kw">let</span> ex: Int::add(
+<a class="ln" id="L59" href="#L59">59</a>    Int::add(x, z),
+<a class="ln" id="L60" href="#L60">60</a>    Int::neg(z)
+<a class="ln" id="L61" href="#L61">61</a>  ) = x := <span class="kw">by</span> <span class="mac">int_norm!</span>(): Int::add(Int::add(x, z), Int::neg(z)) = x {}
+<a class="ln" id="L62" href="#L62">62</a>  <span class="kw">let</span> ey: Int::add(
+<a class="ln" id="L63" href="#L63">63</a>    Int::add(y, z),
+<a class="ln" id="L64" href="#L64">64</a>    Int::neg(z)
+<a class="ln" id="L65" href="#L65">65</a>  ) = y := <span class="kw">by</span> <span class="mac">int_norm!</span>(): Int::add(Int::add(y, z), Int::neg(z)) = y {}
+<a class="ln" id="L66" href="#L66">66</a>  Int::le_rw(
+<a class="ln" id="L67" href="#L67">67</a>    Int::add(Int::add(x, z), Int::neg(z)),
+<a class="ln" id="L68" href="#L68">68</a>    x,
+<a class="ln" id="L69" href="#L69">69</a>    Int::add(Int::add(y, z), Int::neg(z)),
+<a class="ln" id="L70" href="#L70">70</a>    y,
+<a class="ln" id="L71" href="#L71">71</a>    ex,
+<a class="ln" id="L72" href="#L72">72</a>    ey,
+<a class="ln" id="L73" href="#L73">73</a>    Int::le_add(Int::add(x, z), Int::add(y, z), Int::neg(z), h)
+<a class="ln" id="L74" href="#L74">74</a>  )
+<a class="ln" id="L75" href="#L75">75</a>}
+<a class="ln" id="L76" href="#L76">76</a>
+<a class="ln" id="L77" href="#L77">77</a><span class="com">// The mediant (a+c)/(b+d) lies strictly between a/b and c/d.</span>
+<a class="ln" id="L78" href="#L78">78</a><span class="com">// Using it instead of a midpoint keeps the arithmetic proof small.</span>
+<a class="ln" id="L79" href="#L79">79</a><span class="kw">pub</span> <span class="kw">fn</span> rational_between(x: Rat, y: Rat): Rat {
+<a class="ln" id="L80" href="#L80">80</a>  ⊢ Rat <span class="kw">from</span> <span class="kw">match</span> x {
+<a class="ln" id="L81" href="#L81">81</a>    Mk(a, p) =&gt; ⊢ Rat <span class="kw">from</span> <span class="kw">match</span> y {
+<a class="ln" id="L82" href="#L82">82</a>      Mk(b, q) =&gt; Rat::Mk(Int::add(a, b), Succ(Nat::add(p, q)))
+<a class="ln" id="L83" href="#L83">83</a>    }
+<a class="ln" id="L84" href="#L84">84</a>  }
+<a class="ln" id="L85" href="#L85">85</a>}
+<a class="ln" id="L86" href="#L86">86</a>
+<a class="ln" id="L87" href="#L87">87</a><span class="kw">pub</span> <span class="kw">theorem</span> rational_between_left(
+<a class="ln" id="L88" href="#L88">88</a>  x: Rat,
+<a class="ln" id="L89" href="#L89">89</a>  y: Rat,
+<a class="ln" id="L90" href="#L90">90</a>  h: <a href="#L9">RationalLt</a>(x, y)
+<a class="ln" id="L91" href="#L91">91</a>): <a href="#L9">RationalLt</a>(x, <a href="#L79">rational_between</a>(x, y)) {
+<a class="ln" id="L92" href="#L92">92</a>  ⊢ RationalLt(x, rational_between(x, y)) <span class="kw">from</span> <span class="kw">match</span> x {
+<a class="ln" id="L93" href="#L93">93</a>    Mk(a, p) =&gt; ⊢ RationalLt(Rat::Mk(a, p), rational_between(Rat::Mk(a, p), y)) <span class="kw">from</span> <span class="kw">match</span> y {
+<a class="ln" id="L94" href="#L94">94</a>      Mk(b, q) =&gt; (bad: RatLe(rational_between(Rat::Mk(a, p), Rat::Mk(b, q)), Rat::Mk(a, p))) =&gt; h(
+<a class="ln" id="L95" href="#L95">95</a>        integer_le_add_cancel(
+<a class="ln" id="L96" href="#L96">96</a>          Int::mul(b, IntOfNat(Succ(p))),
+<a class="ln" id="L97" href="#L97">97</a>          Int::mul(a, IntOfNat(Succ(q))),
+<a class="ln" id="L98" href="#L98">98</a>          Int::mul(a, IntOfNat(Succ(p))),
+<a class="ln" id="L99" href="#L99">99</a>          Int::le_rw(
+<a class="ln" id="L100" href="#L100">100</a>            Int::mul(Int::add(a, b), IntOfNat(Succ(p))),
+<a class="ln" id="L101" href="#L101">101</a>            Int::add(Int::mul(b, IntOfNat(Succ(p))), Int::mul(a, IntOfNat(Succ(p)))),
+<a class="ln" id="L102" href="#L102">102</a>            Int::mul(a, IntOfNat(Succ(Succ(Nat::add(p, q))))),
+<a class="ln" id="L103" href="#L103">103</a>            Int::add(Int::mul(a, IntOfNat(Succ(q))), Int::mul(a, IntOfNat(Succ(p)))),
+<a class="ln" id="L104" href="#L104">104</a>            <span class="kw">by</span> <span class="mac">int_norm!</span>(): Int::mul(
+<a class="ln" id="L105" href="#L105">105</a>              Int::add(a, b),
+<a class="ln" id="L106" href="#L106">106</a>              IntOfNat(Succ(p))
+<a class="ln" id="L107" href="#L107">107</a>            ) = Int::add(Int::mul(b, IntOfNat(Succ(p))), Int::mul(a, IntOfNat(Succ(p)))) {},
+<a class="ln" id="L108" href="#L108">108</a>            <span class="kw">by</span> <span class="mac">int_norm!</span>(): Int::mul(
+<a class="ln" id="L109" href="#L109">109</a>              a,
+<a class="ln" id="L110" href="#L110">110</a>              IntOfNat(Succ(Succ(Nat::add(p, q))))
+<a class="ln" id="L111" href="#L111">111</a>            ) = Int::add(Int::mul(a, IntOfNat(Succ(q))), Int::mul(a, IntOfNat(Succ(p)))) {},
+<a class="ln" id="L112" href="#L112">112</a>            bad
+<a class="ln" id="L113" href="#L113">113</a>          )
+<a class="ln" id="L114" href="#L114">114</a>        )
+<a class="ln" id="L115" href="#L115">115</a>      )
+<a class="ln" id="L116" href="#L116">116</a>    }
+<a class="ln" id="L117" href="#L117">117</a>  }
+<a class="ln" id="L118" href="#L118">118</a>}
+<a class="ln" id="L119" href="#L119">119</a>
+<a class="ln" id="L120" href="#L120">120</a><span class="kw">pub</span> <span class="kw">theorem</span> rational_between_right(
+<a class="ln" id="L121" href="#L121">121</a>  x: Rat,
+<a class="ln" id="L122" href="#L122">122</a>  y: Rat,
+<a class="ln" id="L123" href="#L123">123</a>  h: <a href="#L9">RationalLt</a>(x, y)
+<a class="ln" id="L124" href="#L124">124</a>): <a href="#L9">RationalLt</a>(<a href="#L79">rational_between</a>(x, y), y) {
+<a class="ln" id="L125" href="#L125">125</a>  ⊢ RationalLt(rational_between(x, y), y) <span class="kw">from</span> <span class="kw">match</span> x {
+<a class="ln" id="L126" href="#L126">126</a>    Mk(a, p) =&gt; ⊢ RationalLt(rational_between(Rat::Mk(a, p), y), y) <span class="kw">from</span> <span class="kw">match</span> y {
+<a class="ln" id="L127" href="#L127">127</a>      Mk(b, q) =&gt; (bad: RatLe(Rat::Mk(b, q), rational_between(Rat::Mk(a, p), Rat::Mk(b, q)))) =&gt; h(
+<a class="ln" id="L128" href="#L128">128</a>        integer_le_add_cancel(
+<a class="ln" id="L129" href="#L129">129</a>          Int::mul(b, IntOfNat(Succ(p))),
+<a class="ln" id="L130" href="#L130">130</a>          Int::mul(a, IntOfNat(Succ(q))),
+<a class="ln" id="L131" href="#L131">131</a>          Int::mul(b, IntOfNat(Succ(q))),
+<a class="ln" id="L132" href="#L132">132</a>          Int::le_rw(
+<a class="ln" id="L133" href="#L133">133</a>            Int::mul(b, IntOfNat(Succ(Succ(Nat::add(p, q))))),
+<a class="ln" id="L134" href="#L134">134</a>            Int::add(Int::mul(b, IntOfNat(Succ(p))), Int::mul(b, IntOfNat(Succ(q)))),
+<a class="ln" id="L135" href="#L135">135</a>            Int::mul(Int::add(a, b), IntOfNat(Succ(q))),
+<a class="ln" id="L136" href="#L136">136</a>            Int::add(Int::mul(a, IntOfNat(Succ(q))), Int::mul(b, IntOfNat(Succ(q)))),
+<a class="ln" id="L137" href="#L137">137</a>            <span class="kw">by</span> <span class="mac">int_norm!</span>(): Int::mul(
+<a class="ln" id="L138" href="#L138">138</a>              b,
+<a class="ln" id="L139" href="#L139">139</a>              IntOfNat(Succ(Succ(Nat::add(p, q))))
+<a class="ln" id="L140" href="#L140">140</a>            ) = Int::add(Int::mul(b, IntOfNat(Succ(p))), Int::mul(b, IntOfNat(Succ(q)))) {},
+<a class="ln" id="L141" href="#L141">141</a>            <span class="kw">by</span> <span class="mac">int_norm!</span>(): Int::mul(
+<a class="ln" id="L142" href="#L142">142</a>              Int::add(a, b),
+<a class="ln" id="L143" href="#L143">143</a>              IntOfNat(Succ(q))
+<a class="ln" id="L144" href="#L144">144</a>            ) = Int::add(Int::mul(a, IntOfNat(Succ(q))), Int::mul(b, IntOfNat(Succ(q)))) {},
+<a class="ln" id="L145" href="#L145">145</a>            bad
+<a class="ln" id="L146" href="#L146">146</a>          )
+<a class="ln" id="L147" href="#L147">147</a>        )
+<a class="ln" id="L148" href="#L148">148</a>      )
+<a class="ln" id="L149" href="#L149">149</a>    }
+<a class="ln" id="L150" href="#L150">150</a>  }
+<a class="ln" id="L151" href="#L151">151</a>}
+</code></pre>
+</html>

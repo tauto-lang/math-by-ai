@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/primes.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/primes.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::Base
+<a class="ln" id="L2" href="#L2">2</a><span class="kw">import</span> std::Nat
+<a class="ln" id="L3" href="#L3">3</a><span class="kw">import</span> <span class="str">&quot;notation.taut&quot;</span>
+<a class="ln" id="L4" href="#L4">4</a><span class="kw">import</span> <span class="str">&quot;relations.taut&quot;</span>
+<a class="ln" id="L5" href="#L5">5</a><span class="kw">import</span> core::notation
+<a class="ln" id="L6" href="#L6">6</a><span class="kw">import</span> <span class="str">&quot;divisibility.taut&quot;</span>
+<a class="ln" id="L7" href="#L7">7</a><span class="kw">import</span> <span class="str">&quot;euclid.taut&quot;</span>
+<a class="ln" id="L8" href="#L8">8</a><span class="kw">import</span> <span class="str">&quot;coprime.taut&quot;</span>
+<a class="ln" id="L9" href="#L9">9</a>
+<a class="ln" id="L10" href="#L10">10</a><span class="kw">pub(open)</span> <span class="kw">inductive</span> Prime(p: Nat): Prop {
+<a class="ln" id="L11" href="#L11">11</a>  PrimeBy(
+<a class="ln" id="L12" href="#L12">12</a>    positive: <span class="mac">nat!</span>(`<span class="num">1</span> &lt; p`),
+<a class="ln" id="L13" href="#L13">13</a>    divisors: (d: Nat, h: <span class="mac">nat_rel!</span>(`d | p`)) -&gt; <span class="mac">logic!</span>(`d = <span class="num">1</span> ∨ d = p`)
+<a class="ln" id="L14" href="#L14">14</a>  ): <a href="#L10">Prime</a>(p)
+<a class="ln" id="L15" href="#L15">15</a>}
+<a class="ln" id="L16" href="#L16">16</a><span class="kw">pub</span> <span class="kw">theorem</span> prime_gt_one(p: Nat, hp: <a href="#L10">Prime</a>(p)): <span class="mac">nat!</span>(`<span class="num">1</span> &lt; p`) {
+<a class="ln" id="L17" href="#L17">17</a>  ⊢ <span class="mac">nat!</span>(`<span class="num">1</span> &lt; p`) <span class="kw">from</span> <span class="kw">match</span> hp { PrimeBy(pos, all) =&gt; pos }
+<a class="ln" id="L18" href="#L18">18</a>}
+<a class="ln" id="L19" href="#L19">19</a><span class="kw">pub</span> <span class="kw">theorem</span> prime_divisor(
+<a class="ln" id="L20" href="#L20">20</a>  p: Nat,
+<a class="ln" id="L21" href="#L21">21</a>  hp: <a href="#L10">Prime</a>(p),
+<a class="ln" id="L22" href="#L22">22</a>  d: Nat,
+<a class="ln" id="L23" href="#L23">23</a>  h: <span class="mac">nat_rel!</span>(`d | p`)
+<a class="ln" id="L24" href="#L24">24</a>): <span class="mac">logic!</span>(`d = <span class="num">1</span> ∨ d = p`) {
+<a class="ln" id="L25" href="#L25">25</a>  ⊢ <span class="mac">logic!</span>(`d = <span class="num">1</span> ∨ d = p`) <span class="kw">from</span> <span class="kw">match</span> hp { PrimeBy(pos, all) =&gt; all(d, h) }
+<a class="ln" id="L26" href="#L26">26</a>}
+<a class="ln" id="L27" href="#L27">27</a><span class="kw">pub</span> <span class="kw">theorem</span> prime_coprime_or_divides(
+<a class="ln" id="L28" href="#L28">28</a>  p: Nat,
+<a class="ln" id="L29" href="#L29">29</a>  a: Nat,
+<a class="ln" id="L30" href="#L30">30</a>  hp: <a href="#L10">Prime</a>(p)
+<a class="ln" id="L31" href="#L31">31</a>): <span class="mac">logic!</span>(`<span class="fn">Coprime</span>(p, a) ∨ <span class="fn">Divides</span>(p, a)`) {
+<a class="ln" id="L32" href="#L32">32</a>  Or::elim(
+<a class="ln" id="L33" href="#L33">33</a>    <a href="#L19">prime_divisor</a>(p, hp, <a href="../src/euclid.taut.html#L114">gcd</a>(p, a), <a href="../src/euclid.taut.html#L19">gcd_left</a>(p, a, <a href="../src/euclid.taut.html#L114">gcd</a>(p, a), <a href="../src/euclid.taut.html#L160">gcd_correct</a>(p, a))),
+<a class="ln" id="L34" href="#L34">34</a>    (h: <span class="mac">nat!</span>(`<span class="fn">gcd</span>(p, a) = <span class="num">1</span>`)) =&gt; OrInl(h),
+<a class="ln" id="L35" href="#L35">35</a>    (h: <span class="mac">nat!</span>(`<span class="fn">gcd</span>(p, a) = p`)) =&gt; OrInr(
+<a class="ln" id="L36" href="#L36">36</a>      Eq::subst((d: Nat) =&gt; <span class="mac">nat_rel!</span>(`d | a`), h, <a href="../src/euclid.taut.html#L22">gcd_right</a>(p, a, <a href="../src/euclid.taut.html#L114">gcd</a>(p, a), <a href="../src/euclid.taut.html#L160">gcd_correct</a>(p, a)))
+<a class="ln" id="L37" href="#L37">37</a>    )
+<a class="ln" id="L38" href="#L38">38</a>  )
+<a class="ln" id="L39" href="#L39">39</a>}
+<a class="ln" id="L40" href="#L40">40</a><span class="com">// Euclid's prime lemma, derived from computed Bezout coefficients.</span>
+<a class="ln" id="L41" href="#L41">41</a><span class="kw">pub</span> <span class="kw">theorem</span> prime_divides_product(
+<a class="ln" id="L42" href="#L42">42</a>  p: Nat,
+<a class="ln" id="L43" href="#L43">43</a>  a: Nat,
+<a class="ln" id="L44" href="#L44">44</a>  b: Nat,
+<a class="ln" id="L45" href="#L45">45</a>  hp: <a href="#L10">Prime</a>(p),
+<a class="ln" id="L46" href="#L46">46</a>  h: <span class="mac">nat_rel!</span>(`p | a * b`)
+<a class="ln" id="L47" href="#L47">47</a>): <span class="mac">logic!</span>(`<span class="fn">Divides</span>(p, a) ∨ <span class="fn">Divides</span>(p, b)`) {
+<a class="ln" id="L48" href="#L48">48</a>  Or::elim(
+<a class="ln" id="L49" href="#L49">49</a>    <a href="#L27">prime_coprime_or_divides</a>(p, a, hp),
+<a class="ln" id="L50" href="#L50">50</a>    (cop: Coprime(p, a)) =&gt; OrInr(<a href="../src/coprime.taut.html#L128">coprime_cancel</a>(p, a, b, cop, h)),
+<a class="ln" id="L51" href="#L51">51</a>    (pa: <span class="mac">nat_rel!</span>(`p | a`)) =&gt; OrInl(pa)
+<a class="ln" id="L52" href="#L52">52</a>  )
+<a class="ln" id="L53" href="#L53">53</a>}
+</code></pre>
+</html>

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/number_theory.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/number_theory.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::Base
+<a class="ln" id="L2" href="#L2">2</a><span class="kw">import</span> std::Nat
+<a class="ln" id="L3" href="#L3">3</a><span class="kw">import</span> <span class="str">&quot;notation.taut&quot;</span>
+<a class="ln" id="L4" href="#L4">4</a><span class="kw">import</span> <span class="str">&quot;relations.taut&quot;</span>
+<a class="ln" id="L5" href="#L5">5</a><span class="kw">import</span> algebra::monoid
+<a class="ln" id="L6" href="#L6">6</a><span class="kw">import</span> <span class="str">&quot;arithmetic.taut&quot;</span>
+<a class="ln" id="L7" href="#L7">7</a><span class="kw">import</span> <span class="str">&quot;divisibility.taut&quot;</span>
+<a class="ln" id="L8" href="#L8">8</a>
+<a class="ln" id="L9" href="#L9">9</a><span class="kw">pub</span> <span class="kw">theorem</span> divides_sum(a: Nat, xs: List(Nat), h: <a href="../src/divisibility.taut.html#L96">AllDivisible</a>(a, xs)): <span class="mac">nat_rel!</span>(`a | <span class="fn">sum</span>(xs)`) {
+<a class="ln" id="L10" href="#L10">10</a>  ⊢ <span class="mac">nat_rel!</span>(`a | <span class="fn">sum</span>(xs)`) <span class="kw">from</span> <span class="kw">match</span> h {
+<a class="ln" id="L11" href="#L11">11</a>    AllNil =&gt; divides_zero(a)
+<a class="ln" id="L12" href="#L12">12</a>    AllCons(x, rest, hx, hr) =&gt; divides_add(a, x, sum(rest), hx, divides_sum(a, rest, hr))
+<a class="ln" id="L13" href="#L13">13</a>  }
+<a class="ln" id="L14" href="#L14">14</a>}
+<a class="ln" id="L15" href="#L15">15</a><span class="com">// Every positive power of a number is a multiple of that number.</span>
+<a class="ln" id="L16" href="#L16">16</a><span class="kw">pub</span> <span class="kw">theorem</span> divides_positive_power(a: Nat, n: Nat): <span class="mac">nat_rel!</span>(`a | <span class="fn">power</span>(Nat::mul, <span class="num">1</span>, a, <span class="fn">Succ</span>(n))`) {
+<a class="ln" id="L17" href="#L17">17</a>  <a href="../src/divisibility.taut.html#L12">By</a>(power(Nat::mul, <span class="num">1</span>, a, n), Nat::mul_comm(a, power(Nat::mul, <span class="num">1</span>, a, n)))
+<a class="ln" id="L18" href="#L18">18</a>}
+<a class="ln" id="L19" href="#L19">19</a><span class="com">// The same divisor divides every natural linear combination of two multiples.</span>
+<a class="ln" id="L20" href="#L20">20</a><span class="kw">pub</span> <span class="kw">theorem</span> divides_linear_combination(
+<a class="ln" id="L21" href="#L21">21</a>  a: Nat,
+<a class="ln" id="L22" href="#L22">22</a>  b: Nat,
+<a class="ln" id="L23" href="#L23">23</a>  c: Nat,
+<a class="ln" id="L24" href="#L24">24</a>  x: Nat,
+<a class="ln" id="L25" href="#L25">25</a>  y: Nat,
+<a class="ln" id="L26" href="#L26">26</a>  ab: <span class="mac">nat_rel!</span>(`a | b`),
+<a class="ln" id="L27" href="#L27">27</a>  ac: <span class="mac">nat_rel!</span>(`a | c`)
+<a class="ln" id="L28" href="#L28">28</a>): <span class="mac">nat_rel!</span>(`a | b * x + c * y`) {
+<a class="ln" id="L29" href="#L29">29</a>  <a href="../src/divisibility.taut.html#L35">divides_add</a>(
+<a class="ln" id="L30" href="#L30">30</a>    a,
+<a class="ln" id="L31" href="#L31">31</a>    <span class="mac">nat!</span>(`b * x`),
+<a class="ln" id="L32" href="#L32">32</a>    <span class="mac">nat!</span>(`c * y`),
+<a class="ln" id="L33" href="#L33">33</a>    <a href="../src/divisibility.taut.html#L56">divides_mul_right</a>(a, b, x, ab),
+<a class="ln" id="L34" href="#L34">34</a>    <a href="../src/divisibility.taut.html#L56">divides_mul_right</a>(a, c, y, ac)
+<a class="ln" id="L35" href="#L35">35</a>  )
+<a class="ln" id="L36" href="#L36">36</a>}
+</code></pre>
+</html>

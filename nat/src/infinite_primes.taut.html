@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/infinite_primes.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/infinite_primes.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::Base
+<a class="ln" id="L2" href="#L2">2</a><span class="kw">import</span> std::Nat
+<a class="ln" id="L3" href="#L3">3</a><span class="kw">import</span> std::NatDiv
+<a class="ln" id="L4" href="#L4">4</a><span class="kw">import</span> std::IntLaws
+<a class="ln" id="L5" href="#L5">5</a><span class="kw">import</span> <span class="str">&quot;notation.taut&quot;</span>
+<a class="ln" id="L6" href="#L6">6</a><span class="kw">import</span> <span class="str">&quot;relations.taut&quot;</span>
+<a class="ln" id="L7" href="#L7">7</a><span class="kw">import</span> <span class="str">&quot;arithmetic.taut&quot;</span>
+<a class="ln" id="L8" href="#L8">8</a><span class="kw">import</span> <span class="str">&quot;divisibility.taut&quot;</span>
+<a class="ln" id="L9" href="#L9">9</a><span class="kw">import</span> <span class="str">&quot;subtraction.taut&quot;</span>
+<a class="ln" id="L10" href="#L10">10</a><span class="kw">import</span> <span class="str">&quot;primes.taut&quot;</span>
+<a class="ln" id="L11" href="#L11">11</a><span class="kw">import</span> <span class="str">&quot;primality.taut&quot;</span>
+<a class="ln" id="L12" href="#L12">12</a><span class="kw">import</span> <span class="str">&quot;factorization.taut&quot;</span>
+<a class="ln" id="L13" href="#L13">13</a><span class="kw">import</span> <span class="str">&quot;unique_factorization.taut&quot;</span>
+<a class="ln" id="L14" href="#L14">14</a><span class="kw">import</span> std::proof::Lang { proof }
+<a class="ln" id="L15" href="#L15">15</a><span class="kw">import</span> std::proof::Forms { proof_by, proof_case, proof_consider, proof_this }
+<a class="ln" id="L16" href="#L16">16</a>
+<a class="ln" id="L17" href="#L17">17</a><span class="kw">pub</span> <span class="kw">fn</span> factorial(n: Nat): Nat {
+<a class="ln" id="L18" href="#L18">18</a>  ⊢ Nat <span class="kw">from</span> <span class="kw">match</span> n { Zero =&gt; <span class="num">1</span>
+<a class="ln" id="L19" href="#L19">19</a>    Succ(k) =&gt; <span class="mac">nat!</span>(`<span class="fn">Succ</span>(k) * <span class="fn">factorial</span>(k)`) }
+<a class="ln" id="L20" href="#L20">20</a>}
+<a class="ln" id="L21" href="#L21">21</a><span class="kw">theorem</span> positive_mul(a: Nat, b: Nat, ha: <span class="mac">nat!</span>(`<span class="num">0</span> &lt; a`), hb: <span class="mac">nat!</span>(`<span class="num">0</span> &lt; b`)): <span class="mac">nat!</span>(`<span class="num">0</span> &lt; a * b`) {
+<a class="ln" id="L22" href="#L22">22</a>  ⊢ <span class="mac">nat!</span>(`<span class="num">0</span> &lt; a * b`) <span class="kw">from</span> <span class="kw">match</span> a {
+<a class="ln" id="L23" href="#L23">23</a>    Zero =&gt; False::elim(false_ne_true(ha))
+<a class="ln" id="L24" href="#L24">24</a>    Succ(k) =&gt; ⊢ <span class="mac">nat!</span>(`<span class="num">0</span> &lt; <span class="fn">Succ</span>(k) * b`) <span class="kw">from</span> <span class="kw">match</span> b {
+<a class="ln" id="L25" href="#L25">25</a>      Zero =&gt; False::elim(false_ne_true(hb))
+<a class="ln" id="L26" href="#L26">26</a>      Succ(j) =&gt; Eq::congr((x: Nat) =&gt; Nat::lt(<span class="num">0</span>, x), Nat::mul_succ_left(k, Succ(j)))
+<a class="ln" id="L27" href="#L27">27</a>    }
+<a class="ln" id="L28" href="#L28">28</a>  }
+<a class="ln" id="L29" href="#L29">29</a>}
+<a class="ln" id="L30" href="#L30">30</a><span class="kw">pub</span> <span class="kw">theorem</span> factorial_positive(n: Nat): <span class="mac">nat!</span>(`<span class="num">0</span> &lt; <span class="fn">factorial</span>(n)`) {
+<a class="ln" id="L31" href="#L31">31</a>  ⊢ <span class="mac">nat!</span>(`<span class="num">0</span> &lt; <span class="fn">factorial</span>(n)`) <span class="kw">from</span> <span class="kw">match</span> n {
+<a class="ln" id="L32" href="#L32">32</a>    Zero =&gt; Refl
+<a class="ln" id="L33" href="#L33">33</a>    Succ(k) =&gt; positive_mul(Succ(k), factorial(k), Refl, factorial_positive(k))
+<a class="ln" id="L34" href="#L34">34</a>  }
+<a class="ln" id="L35" href="#L35">35</a>}
+<a class="ln" id="L36" href="#L36">36</a><span class="kw">pub</span> <span class="kw">theorem</span> divides_factorial(
+<a class="ln" id="L37" href="#L37">37</a>  d: Nat,
+<a class="ln" id="L38" href="#L38">38</a>  n: Nat,
+<a class="ln" id="L39" href="#L39">39</a>  positive: <span class="mac">nat!</span>(`<span class="num">0</span> &lt; d`),
+<a class="ln" id="L40" href="#L40">40</a>  bound: <span class="mac">nat!</span>(`d ≤ n`)
+<a class="ln" id="L41" href="#L41">41</a>): <span class="mac">nat_rel!</span>(`d | <span class="fn">factorial</span>(n)`) {
+<a class="ln" id="L42" href="#L42">42</a>  ⊢ <span class="mac">nat_rel!</span>(`d | <span class="fn">factorial</span>(n)`) <span class="kw">from</span> <span class="kw">match</span> n {
+<a class="ln" id="L43" href="#L43">43</a>    Zero =&gt; ⊢ <span class="mac">nat_rel!</span>(`d | <span class="fn">factorial</span>(<span class="num">0</span>)`) <span class="kw">from</span> <span class="kw">match</span> d {
+<a class="ln" id="L44" href="#L44">44</a>      Zero =&gt; False::elim(false_ne_true(positive))
+<a class="ln" id="L45" href="#L45">45</a>      Succ(k) =&gt; False::elim(false_ne_true(Eq::trans(Eq::sym(Nat::lt_zero_false(k)), bound)))
+<a class="ln" id="L46" href="#L46">46</a>    }
+<a class="ln" id="L47" href="#L47">47</a>    Succ(k) =&gt; Or::elim(
+<a class="ln" id="L48" href="#L48">48</a>      boolean_cases(Nat::eq(d, Succ(k))),
+<a class="ln" id="L49" href="#L49">49</a>      (ne: Nat::eq(d, Succ(k)) = <span class="kw">false</span>) =&gt; divides_mul_left(
+<a class="ln" id="L50" href="#L50">50</a>        d,
+<a class="ln" id="L51" href="#L51">51</a>        factorial(k),
+<a class="ln" id="L52" href="#L52">52</a>        Succ(k),
+<a class="ln" id="L53" href="#L53">53</a>        divides_factorial(d, k, positive, Nat::lt_succ_ne(d, Succ(k), bound, ne))
+<a class="ln" id="L54" href="#L54">54</a>      ),
+<a class="ln" id="L55" href="#L55">55</a>      (eq: Nat::eq(d, Succ(k)) = <span class="kw">true</span>) =&gt; Eq::subst(
+<a class="ln" id="L56" href="#L56">56</a>        (x: Nat) =&gt; <span class="mac">nat_rel!</span>(`x | <span class="fn">factorial</span>(<span class="fn">Succ</span>(k))`),
+<a class="ln" id="L57" href="#L57">57</a>        Eq::sym(Nat::eq_sound(d, Succ(k), eq)),
+<a class="ln" id="L58" href="#L58">58</a>        By(factorial(k), Refl)
+<a class="ln" id="L59" href="#L59">59</a>      )
+<a class="ln" id="L60" href="#L60">60</a>    )
+<a class="ln" id="L61" href="#L61">61</a>  }
+<a class="ln" id="L62" href="#L62">62</a>}
+<a class="ln" id="L63" href="#L63">63</a><span class="kw">theorem</span> le_false_lt(a: Nat, b: Nat, h: Nat::le(a, b) = <span class="kw">false</span>): <span class="mac">nat!</span>(`b &lt; a`) {
+<a class="ln" id="L64" href="#L64">64</a>  ⊢ <span class="mac">nat!</span>(`b &lt; a`) <span class="kw">from</span> <span class="kw">match</span> a {
+<a class="ln" id="L65" href="#L65">65</a>    Zero =&gt; False::elim(true_ne_false(Eq::trans(Eq::sym(Nat::le_zero(b)), h)))
+<a class="ln" id="L66" href="#L66">66</a>    Succ(k) =&gt; ⊢ <span class="mac">nat!</span>(`b &lt; <span class="fn">Succ</span>(k)`) <span class="kw">from</span> <span class="kw">match</span> b {
+<a class="ln" id="L67" href="#L67">67</a>      Zero =&gt; Refl
+<a class="ln" id="L68" href="#L68">68</a>      Succ(j) =&gt; le_false_lt(k, j, h)
+<a class="ln" id="L69" href="#L69">69</a>    }
+<a class="ln" id="L70" href="#L70">70</a>  }
+<a class="ln" id="L71" href="#L71">71</a>}
+<a class="ln" id="L72" href="#L72">72</a><span class="kw">theorem</span> prime_factor_above(
+<a class="ln" id="L73" href="#L73">73</a>  n: Nat,
+<a class="ln" id="L74" href="#L74">74</a>  p: Nat,
+<a class="ln" id="L75" href="#L75">75</a>  hp: <a href="../src/primes.taut.html#L10">Prime</a>(p),
+<a class="ln" id="L76" href="#L76">76</a>  divides: <span class="mac">nat_rel!</span>(`p | <span class="fn">Succ</span>(<span class="fn">factorial</span>(n))`)
+<a class="ln" id="L77" href="#L77">77</a>): <span class="mac">nat!</span>(`n &lt; p`) {
+<a class="ln" id="L78" href="#L78">78</a>  <span class="mac">proof!</span>(```
+<a class="ln" id="L79" href="#L79">79</a>      <span class="kw">Consider</span> whether $nat_bool!(`<span class="str">p ≤ n</span>`) holds.
+<a class="ln" id="L80" href="#L80">80</a>        <span class="kw">Case</span> above: not($nat_bool!(`<span class="str">p ≤ n</span>`)). <span class="kw">By</span> le_false_lt(p, n, above).
+<a class="ln" id="L81" href="#L81">81</a>        [below] <span class="kw">Case</span> below: $nat_bool!(`<span class="str">p ≤ n</span>`). <span class="kw">This</span> contradicts prime_not_divides_one(p, hp).
+<a class="ln" id="L82" href="#L82">82</a>      %%
+<a class="ln" id="L83" href="#L83">83</a>      [below] <span class="fn">Eq::subst</span>($((<span class="var">x</span>: <span class="ty">Nat</span>) =&gt; nat_rel!(`<span class="str">p | x</span>`)), <span class="fn">sub_sum_left</span>(<span class="fn">factorial</span>(n), <span class="num">1</span>), <span class="fn">divides_subtract</span>(p, <span class="fn">Succ</span>(<span class="fn">factorial</span>(n)), <span class="fn">factorial</span>(n), divides, <span class="fn">divides_factorial</span>(p, n, <span class="fn">Nat::lt_of_succ_lt</span>(<span class="num">0</span>, p, <span class="fn">prime_gt_one</span>(p, hp)), below)))
+<a class="ln" id="L84" href="#L84">84</a>    ```)
+<a class="ln" id="L85" href="#L85">85</a>}
+<a class="ln" id="L86" href="#L86">86</a><span class="kw">pub</span> <span class="kw">fn</span> first_or_two(xs: List(Nat)): Nat {
+<a class="ln" id="L87" href="#L87">87</a>  ⊢ Nat <span class="kw">from</span> <span class="kw">match</span> xs { Nil =&gt; <span class="num">2</span>
+<a class="ln" id="L88" href="#L88">88</a>    Cons(x, rest) =&gt; x }
+<a class="ln" id="L89" href="#L89">89</a>}
+<a class="ln" id="L90" href="#L90">90</a><span class="kw">pub</span> <span class="kw">fn</span> prime_above(n: Nat): Nat { <a href="#L86">first_or_two</a>(<a href="../src/factorization.taut.html#L82">factorize</a>(Succ(<a href="#L17">factorial</a>(n)))) }
+<a class="ln" id="L91" href="#L91">91</a><span class="kw">pub(open)</span> <span class="kw">inductive</span> AbovePrime(n: Nat, p: Nat): Prop {
+<a class="ln" id="L92" href="#L92">92</a>  Above(prime: <a href="../src/primes.taut.html#L10">Prime</a>(p), greater: <span class="mac">nat!</span>(`n &lt; p`)): <a href="#L91">AbovePrime</a>(n, p)
+<a class="ln" id="L93" href="#L93">93</a>}
+<a class="ln" id="L94" href="#L94">94</a><span class="kw">theorem</span> head_prime(p: Nat, rest: List(Nat), h: <a href="../src/factorization.taut.html#L12">AllPrime</a>(Cons(p, rest))): <a href="../src/primes.taut.html#L10">Prime</a>(p) {
+<a class="ln" id="L95" href="#L95">95</a>  ⊢ Prime(p) <span class="kw">from</span> <span class="kw">match</span> h { PrimesCons(x, xs, hp, hr) =&gt; hp }
+<a class="ln" id="L96" href="#L96">96</a>}
+<a class="ln" id="L97" href="#L97">97</a><span class="kw">theorem</span> factor_head_above(
+<a class="ln" id="L98" href="#L98">98</a>  n: Nat,
+<a class="ln" id="L99" href="#L99">99</a>  xs: List(Nat),
+<a class="ln" id="L100" href="#L100">100</a>  h: <a href="../src/factorization.taut.html#L16">Factorization</a>(Succ(<a href="#L17">factorial</a>(n)), xs)
+<a class="ln" id="L101" href="#L101">101</a>): <a href="#L91">AbovePrime</a>(n, <a href="#L86">first_or_two</a>(xs)) {
+<a class="ln" id="L102" href="#L102">102</a>  ⊢ AbovePrime(n, first_or_two(xs)) <span class="kw">from</span> <span class="kw">match</span> xs {
+<a class="ln" id="L103" href="#L103">103</a>    Nil =&gt; False::elim(
+<a class="ln" id="L104" href="#L104">104</a>      false_ne_true(
+<a class="ln" id="L105" href="#L105">105</a>        Eq::trans(
+<a class="ln" id="L106" href="#L106">106</a>          Eq::congr(
+<a class="ln" id="L107" href="#L107">107</a>            (x: Nat) =&gt; Nat::lt(<span class="num">0</span>, x),
+<a class="ln" id="L108" href="#L108">108</a>            Eq::congr(Nat::pred, factorization_product(Succ(factorial(n)), Nil, h))
+<a class="ln" id="L109" href="#L109">109</a>          ),
+<a class="ln" id="L110" href="#L110">110</a>          factorial_positive(n)
+<a class="ln" id="L111" href="#L111">111</a>        )
+<a class="ln" id="L112" href="#L112">112</a>      )
+<a class="ln" id="L113" href="#L113">113</a>    )
+<a class="ln" id="L114" href="#L114">114</a>    Cons(p, rest) =&gt; Above(
+<a class="ln" id="L115" href="#L115">115</a>      head_prime(p, rest, factorization_primes(Succ(factorial(n)), Cons(p, rest), h)),
+<a class="ln" id="L116" href="#L116">116</a>      prime_factor_above(
+<a class="ln" id="L117" href="#L117">117</a>        n,
+<a class="ln" id="L118" href="#L118">118</a>        p,
+<a class="ln" id="L119" href="#L119">119</a>        head_prime(p, rest, factorization_primes(Succ(factorial(n)), Cons(p, rest), h)),
+<a class="ln" id="L120" href="#L120">120</a>        By(prod(rest), factorization_product(Succ(factorial(n)), Cons(p, rest), h))
+<a class="ln" id="L121" href="#L121">121</a>      )
+<a class="ln" id="L122" href="#L122">122</a>    )
+<a class="ln" id="L123" href="#L123">123</a>  }
+<a class="ln" id="L124" href="#L124">124</a>}
+<a class="ln" id="L125" href="#L125">125</a><span class="com">// A constructive infinitude theorem: prime_above computes a witness for every bound.</span>
+<a class="ln" id="L126" href="#L126">126</a><span class="kw">pub</span> <span class="kw">theorem</span> prime_above_correct(n: Nat): <a href="#L91">AbovePrime</a>(n, <a href="#L90">prime_above</a>(n)) {
+<a class="ln" id="L127" href="#L127">127</a>  <a href="#L97">factor_head_above</a>(n, <a href="../src/factorization.taut.html#L82">factorize</a>(Succ(<a href="#L17">factorial</a>(n))), <a href="../src/factorization.taut.html#L159">factorize_correct</a>(Succ(<a href="#L17">factorial</a>(n)), Refl))
+<a class="ln" id="L128" href="#L128">128</a>}
+</code></pre>
+</html>

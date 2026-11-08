@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/interval_cut.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/interval_cut.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::Base
+<a class="ln" id="L2" href="#L2">2</a><span class="kw">import</span> std::Rat
+<a class="ln" id="L3" href="#L3">3</a><span class="kw">import</span> std::Int
+<a class="ln" id="L4" href="#L4">4</a><span class="kw">import</span> std::RatLaws
+<a class="ln" id="L5" href="#L5">5</a><span class="kw">import</span> <span class="str">&quot;rational_order.taut&quot;</span>
+<a class="ln" id="L6" href="#L6">6</a><span class="kw">import</span> <span class="str">&quot;interval.taut&quot;</span>
+<a class="ln" id="L7" href="#L7">7</a><span class="kw">import</span> <span class="str">&quot;real.taut&quot;</span>
+<a class="ln" id="L8" href="#L8">8</a>
+<a class="ln" id="L9" href="#L9">9</a><span class="kw">pub</span> <span class="kw">fn</span> interval_lower(boxes: (Nat) -&gt; <a href="../src/interval.taut.html#L8">Interval</a>, q: Rat): Prop {
+<a class="ln" id="L10" href="#L10">10</a>  <span class="kw">∃</span> n: Nat. <a href="../src/rational_order.taut.html#L9">RationalLt</a>(q, <a href="../src/interval.taut.html#L11">left</a>(boxes(n)))
+<a class="ln" id="L11" href="#L11">11</a>}
+<a class="ln" id="L12" href="#L12">12</a>
+<a class="ln" id="L13" href="#L13">13</a><span class="kw">pub</span> <span class="kw">theorem</span> interval_cut_downward(
+<a class="ln" id="L14" href="#L14">14</a>  boxes: (Nat) -&gt; <a href="../src/interval.taut.html#L8">Interval</a>,
+<a class="ln" id="L15" href="#L15">15</a>  p: Rat,
+<a class="ln" id="L16" href="#L16">16</a>  q: Rat,
+<a class="ln" id="L17" href="#L17">17</a>  pq: <a href="../src/rational_order.taut.html#L9">RationalLt</a>(p, q),
+<a class="ln" id="L18" href="#L18">18</a>  h: <a href="#L9">interval_lower</a>(boxes, q)
+<a class="ln" id="L19" href="#L19">19</a>): <a href="#L9">interval_lower</a>(boxes, p) {
+<a class="ln" id="L20" href="#L20">20</a>  ⊢ interval_lower(boxes, p) <span class="kw">from</span> <span class="kw">match</span> h {
+<a class="ln" id="L21" href="#L21">21</a>    ExIntro(n, lt) =&gt; ExIntro(n, rational_lt_trans(p, q, left(boxes(n)), pq, lt))
+<a class="ln" id="L22" href="#L22">22</a>  }
+<a class="ln" id="L23" href="#L23">23</a>}
+<a class="ln" id="L24" href="#L24">24</a><span class="kw">pub</span> <span class="kw">theorem</span> interval_cut_rounded(
+<a class="ln" id="L25" href="#L25">25</a>  boxes: (Nat) -&gt; <a href="../src/interval.taut.html#L8">Interval</a>,
+<a class="ln" id="L26" href="#L26">26</a>  p: Rat,
+<a class="ln" id="L27" href="#L27">27</a>  h: <a href="#L9">interval_lower</a>(boxes, p)
+<a class="ln" id="L28" href="#L28">28</a>): <span class="kw">∃</span> q: Rat. <a href="../src/rational_order.taut.html#L9">RationalLt</a>(p, q) ∧ <a href="#L9">interval_lower</a>(boxes, q) {
+<a class="ln" id="L29" href="#L29">29</a>  ⊢ <span class="kw">∃</span> q: Rat. RationalLt(p, q) ∧ interval_lower(boxes, q) <span class="kw">from</span> <span class="kw">match</span> h {
+<a class="ln" id="L30" href="#L30">30</a>    ExIntro(n, lt) =&gt; ExIntro(
+<a class="ln" id="L31" href="#L31">31</a>      rational_between(p, left(boxes(n))),
+<a class="ln" id="L32" href="#L32">32</a>      AndIntro(
+<a class="ln" id="L33" href="#L33">33</a>        rational_between_left(p, left(boxes(n)), lt),
+<a class="ln" id="L34" href="#L34">34</a>        ExIntro(n, rational_between_right(p, left(boxes(n)), lt))
+<a class="ln" id="L35" href="#L35">35</a>      )
+<a class="ln" id="L36" href="#L36">36</a>    )
+<a class="ln" id="L37" href="#L37">37</a>  }
+<a class="ln" id="L38" href="#L38">38</a>}
+<a class="ln" id="L39" href="#L39">39</a><span class="kw">pub</span> <span class="kw">theorem</span> interval_cut_bounded(
+<a class="ln" id="L40" href="#L40">40</a>  boxes: (Nat) -&gt; <a href="../src/interval.taut.html#L8">Interval</a>,
+<a class="ln" id="L41" href="#L41">41</a>  nested: (n: Nat) -&gt; <a href="../src/interval.taut.html#L24">Inside</a>(boxes(Succ(n)), boxes(n)),
+<a class="ln" id="L42" href="#L42">42</a>  n: Nat
+<a class="ln" id="L43" href="#L43">43</a>): ¬<a href="#L9">interval_lower</a>(boxes, <a href="../src/interval.taut.html#L12">right</a>(boxes(n))) {
+<a class="ln" id="L44" href="#L44">44</a>  (h: interval_lower(boxes, right(boxes(n)))) =&gt; ⊢ False <span class="kw">from</span> <span class="kw">match</span> h {
+<a class="ln" id="L45" href="#L45">45</a>    ExIntro(k, lt) =&gt; lt(
+<a class="ln" id="L46" href="#L46">46</a>      rational_lt_le(left(boxes(k)), right(boxes(n)), chain_cross(boxes, nested, k, n))
+<a class="ln" id="L47" href="#L47">47</a>    )
+<a class="ln" id="L48" href="#L48">48</a>  }
+<a class="ln" id="L49" href="#L49">49</a>}
+<a class="ln" id="L50" href="#L50">50</a>
+<a class="ln" id="L51" href="#L51">51</a><span class="kw">pub</span> <span class="kw">fn</span> interval_real(
+<a class="ln" id="L52" href="#L52">52</a>  boxes: (Nat) -&gt; <a href="../src/interval.taut.html#L8">Interval</a>,
+<a class="ln" id="L53" href="#L53">53</a>  nested: (n: Nat) -&gt; <a href="../src/interval.taut.html#L24">Inside</a>(boxes(Succ(n)), boxes(n)),
+<a class="ln" id="L54" href="#L54">54</a>  inhabited: <span class="kw">∃</span> q: Rat. <a href="#L9">interval_lower</a>(boxes, q)
+<a class="ln" id="L55" href="#L55">55</a>): <a href="../src/real.taut.html#L8">Real</a> {
+<a class="ln" id="L56" href="#L56">56</a>  <a href="../src/real.taut.html#L9">Dedekind</a>(
+<a class="ln" id="L57" href="#L57">57</a>    (q: Rat) =&gt; <a href="#L9">interval_lower</a>(boxes, q),
+<a class="ln" id="L58" href="#L58">58</a>    inhabited,
+<a class="ln" id="L59" href="#L59">59</a>    ExIntro(<a href="../src/interval.taut.html#L12">right</a>(boxes(<span class="num">0</span>)), <a href="#L39">interval_cut_bounded</a>(boxes, nested, <span class="num">0</span>)),
+<a class="ln" id="L60" href="#L60">60</a>    (p: Rat, q: Rat, pq: RationalLt(p, q), h: interval_lower(boxes, q)) =&gt; <a href="#L13">interval_cut_downward</a>(
+<a class="ln" id="L61" href="#L61">61</a>      boxes,
+<a class="ln" id="L62" href="#L62">62</a>      p,
+<a class="ln" id="L63" href="#L63">63</a>      q,
+<a class="ln" id="L64" href="#L64">64</a>      pq,
+<a class="ln" id="L65" href="#L65">65</a>      h
+<a class="ln" id="L66" href="#L66">66</a>    ),
+<a class="ln" id="L67" href="#L67">67</a>    (p: Rat, h: interval_lower(boxes, p)) =&gt; <a href="#L24">interval_cut_rounded</a>(boxes, p, h)
+<a class="ln" id="L68" href="#L68">68</a>  )
+<a class="ln" id="L69" href="#L69">69</a>}
+</code></pre>
+</html>

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/prime_decision.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/prime_decision.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::Base
+<a class="ln" id="L2" href="#L2">2</a><span class="kw">import</span> std::Nat
+<a class="ln" id="L3" href="#L3">3</a><span class="kw">import</span> <span class="str">&quot;divisibility.taut&quot;</span>
+<a class="ln" id="L4" href="#L4">4</a><span class="kw">import</span> <span class="str">&quot;primes.taut&quot;</span>
+<a class="ln" id="L5" href="#L5">5</a><span class="kw">import</span> <span class="str">&quot;primality.taut&quot;</span>
+<a class="ln" id="L6" href="#L6">6</a><span class="kw">import</span> <span class="str">&quot;factor_search.taut&quot;</span>
+<a class="ln" id="L7" href="#L7">7</a>
+<a class="ln" id="L8" href="#L8">8</a><span class="kw">pub</span> <span class="kw">theorem</span> is_prime_complete(n: Nat, hp: <a href="../src/primes.taut.html#L10">Prime</a>(n)): <a href="../src/primality.taut.html#L45">is_prime</a>(n) = <span class="kw">true</span> {
+<a class="ln" id="L9" href="#L9">9</a>  Or::elim(<a href="../src/primality.taut.html#L47">boolean_cases</a>(<a href="../src/primality.taut.html#L45">is_prime</a>(n)),
+<a class="ln" id="L10" href="#L10">10</a>    (bad: is_prime(n) = <span class="kw">false</span>) =&gt; {
+<a class="ln" id="L11" href="#L11">11</a>      <span class="kw">let</span> d := find_factor(n, n)
+<a class="ln" id="L12" href="#L12">12</a>      <span class="kw">let</span> w := searched_factor(n, prime_gt_one(n, hp), bad)
+<a class="ln" id="L13" href="#L13">13</a>      Or::elim(prime_divisor(n, hp, d, By(quotient(n, d), factor_product(n, d, w))),
+<a class="ln" id="L14" href="#L14">14</a>        (one: d = <span class="num">1</span>) =&gt; False::elim(false_ne_true(Eq::trans(
+<a class="ln" id="L15" href="#L15">15</a>          Eq::sym(Eq::congr((x: Nat) =&gt; Nat::lt(<span class="num">1</span>, x), one)), factor_positive(n, d, w)))),
+<a class="ln" id="L16" href="#L16">16</a>        (equal: d = n) =&gt; False::elim(true_ne_false(Eq::trans(
+<a class="ln" id="L17" href="#L17">17</a>          Eq::sym(Nat::eq_refl(d)), Eq::trans(Eq::congr((x: Nat) =&gt; Nat::eq(d, x), equal), factor_proper(n, d, w))))))
+<a class="ln" id="L18" href="#L18">18</a>    },
+<a class="ln" id="L19" href="#L19">19</a>    (good: is_prime(n) = <span class="kw">true</span>) =&gt; good)
+<a class="ln" id="L20" href="#L20">20</a>}
+<a class="ln" id="L21" href="#L21">21</a><span class="kw">pub</span> <span class="kw">theorem</span> is_prime_false(n: Nat, bad: <a href="../src/primality.taut.html#L45">is_prime</a>(n) = <span class="kw">false</span>, hp: <a href="../src/primes.taut.html#L10">Prime</a>(n)): False {
+<a class="ln" id="L22" href="#L22">22</a>  true_ne_false(Eq::trans(Eq::sym(<a href="#L8">is_prime_complete</a>(n, hp)), bad))
+<a class="ln" id="L23" href="#L23">23</a>}
+</code></pre>
+</html>

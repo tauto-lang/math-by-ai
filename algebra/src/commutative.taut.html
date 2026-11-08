@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/commutative.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/commutative.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::Calc { calc }
+<a class="ln" id="L2" href="#L2">2</a><span class="kw">import</span> std::Base
+<a class="ln" id="L3" href="#L3">3</a><span class="kw">import</span> <span class="str">&quot;notation.taut&quot;</span>
+<a class="ln" id="L4" href="#L4">4</a><span class="kw">import</span> core::equality
+<a class="ln" id="L5" href="#L5">5</a><span class="kw">import</span> <span class="str">&quot;monoid.taut&quot;</span>
+<a class="ln" id="L6" href="#L6">6</a><span class="kw">import</span> std::proof::Lang { proof }
+<a class="ln" id="L7" href="#L7">7</a><span class="kw">import</span> std::proof::Forms { proof_by, proof_case, proof_we }
+<a class="ln" id="L8" href="#L8">8</a>
+<a class="ln" id="L9" href="#L9">9</a><span class="kw">pub(open)</span> <span class="kw">inductive</span> CommMonoid(A: Type, op: (A, A) -&gt; A, unit: A): Prop {
+<a class="ln" id="L10" href="#L10">10</a>  Mk(
+<a class="ln" id="L11" href="#L11">11</a>    monoid: <a href="../src/monoid.taut.html#L9">Monoid</a>(A, op, unit),
+<a class="ln" id="L12" href="#L12">12</a>    comm: (a: A, b: A) -&gt; <span class="mac">alg!</span>(`op, unit; a ⋆ b = b ⋆ a`)
+<a class="ln" id="L13" href="#L13">13</a>  ): <a href="#L9">CommMonoid</a>(A, op, unit)
+<a class="ln" id="L14" href="#L14">14</a>}
+<a class="ln" id="L15" href="#L15">15</a><span class="kw">pub</span> <span class="kw">theorem</span> comm_monoid&lt;A&gt;(
+<a class="ln" id="L16" href="#L16">16</a>  op: (A, A) -&gt; A,
+<a class="ln" id="L17" href="#L17">17</a>  unit: A,
+<a class="ln" id="L18" href="#L18">18</a>  m: <a href="#L9">CommMonoid</a>(A, op, unit)
+<a class="ln" id="L19" href="#L19">19</a>): <a href="../src/monoid.taut.html#L9">Monoid</a>(A, op, unit) {
+<a class="ln" id="L20" href="#L20">20</a>  ⊢ Monoid(A, op, unit) <span class="kw">from</span> <span class="kw">match</span> m { Mk(base, comm) =&gt; base }
+<a class="ln" id="L21" href="#L21">21</a>}
+<a class="ln" id="L22" href="#L22">22</a><span class="kw">pub</span> <span class="kw">theorem</span> commute&lt;A&gt;(
+<a class="ln" id="L23" href="#L23">23</a>  op: (A, A) -&gt; A,
+<a class="ln" id="L24" href="#L24">24</a>  unit: A,
+<a class="ln" id="L25" href="#L25">25</a>  m: <a href="#L9">CommMonoid</a>(A, op, unit),
+<a class="ln" id="L26" href="#L26">26</a>  a: A,
+<a class="ln" id="L27" href="#L27">27</a>  b: A
+<a class="ln" id="L28" href="#L28">28</a>): <span class="mac">alg!</span>(`op, unit; a ⋆ b = b ⋆ a`) {
+<a class="ln" id="L29" href="#L29">29</a>  ⊢ <span class="mac">alg!</span>(`op, unit; a ⋆ b = b ⋆ a`) <span class="kw">from</span> <span class="kw">match</span> m { Mk(base, comm) =&gt; comm(a, b) }
+<a class="ln" id="L30" href="#L30">30</a>}
+<a class="ln" id="L31" href="#L31">31</a><span class="kw">pub</span> <span class="kw">theorem</span> left_commute&lt;A&gt;(
+<a class="ln" id="L32" href="#L32">32</a>  op: (A, A) -&gt; A,
+<a class="ln" id="L33" href="#L33">33</a>  unit: A,
+<a class="ln" id="L34" href="#L34">34</a>  m: <a href="#L9">CommMonoid</a>(A, op, unit),
+<a class="ln" id="L35" href="#L35">35</a>  a: A,
+<a class="ln" id="L36" href="#L36">36</a>  b: A,
+<a class="ln" id="L37" href="#L37">37</a>  c: A
+<a class="ln" id="L38" href="#L38">38</a>): <span class="mac">alg!</span>(`op, unit; a ⋆ (b ⋆ c) = b ⋆ (a ⋆ c)`) {
+<a class="ln" id="L39" href="#L39">39</a>  <span class="kw">let</span> base := <a href="#L15">comm_monoid</a>(op, unit, m)
+<a class="ln" id="L40" href="#L40">40</a>  <span class="mac">calc!</span>(```
+<a class="ln" id="L41" href="#L41">41</a>    $alg!(`<span class="str">op, unit; a ⋆ (b ⋆ c)</span>`)
+<a class="ln" id="L42" href="#L42">42</a>    = $alg!(`<span class="str">op, unit; a ⋆ b ⋆ c</span>`) <span class="kw">from</span> $<span class="ty">Eq::sym</span>(<span class="fn">assoc</span>(<span class="var">op</span>, <span class="var">unit</span>, base, <span class="var">a</span>, <span class="var">b</span>, <span class="var">c</span>))
+<a class="ln" id="L43" href="#L43">43</a>    = $alg!(`<span class="str">op, unit; b ⋆ a ⋆ c</span>`) <span class="kw">from</span> $<span class="ty">Eq::congr</span>(
+<a class="ln" id="L44" href="#L44">44</a>      (<span class="var">x</span>: <span class="ty">A</span>) =&gt; alg!(`<span class="str">op, unit; x ⋆ c</span>`),
+<a class="ln" id="L45" href="#L45">45</a>      <span class="fn">commute</span>(<span class="var">op</span>, <span class="var">unit</span>, <span class="var">m</span>, <span class="var">a</span>, <span class="var">b</span>)
+<a class="ln" id="L46" href="#L46">46</a>    )
+<a class="ln" id="L47" href="#L47">47</a>    = $alg!(`<span class="str">op, unit; b ⋆ (a ⋆ c)</span>`) <span class="kw">from</span> $<span class="fn">assoc</span>(<span class="var">op</span>, <span class="var">unit</span>, base, <span class="var">b</span>, <span class="var">a</span>, <span class="var">c</span>)
+<a class="ln" id="L48" href="#L48">48</a>    ```)
+<a class="ln" id="L49" href="#L49">49</a>}
+<a class="ln" id="L50" href="#L50">50</a><span class="kw">pub</span> <span class="kw">theorem</span> interchange&lt;A&gt;(
+<a class="ln" id="L51" href="#L51">51</a>  op: (A, A) -&gt; A,
+<a class="ln" id="L52" href="#L52">52</a>  unit: A,
+<a class="ln" id="L53" href="#L53">53</a>  m: <a href="#L9">CommMonoid</a>(A, op, unit),
+<a class="ln" id="L54" href="#L54">54</a>  a: A,
+<a class="ln" id="L55" href="#L55">55</a>  b: A,
+<a class="ln" id="L56" href="#L56">56</a>  c: A,
+<a class="ln" id="L57" href="#L57">57</a>  d: A
+<a class="ln" id="L58" href="#L58">58</a>): <span class="mac">alg!</span>(`op, unit; a ⋆ b ⋆ (c ⋆ d) = a ⋆ c ⋆ (b ⋆ d)`) {
+<a class="ln" id="L59" href="#L59">59</a>  <span class="mac">proof!</span>(```
+<a class="ln" id="L60" href="#L60">60</a>      <span class="kw">We</span> have $alg!(`<span class="str">op, unit; a ⋆ b ⋆ (c ⋆ d)</span>`)
+<a class="ln" id="L61" href="#L61">61</a>        = $alg!(`<span class="str">op, unit; a ⋆ (b ⋆ (c ⋆ d))</span>`) by assoc(op, unit, comm_monoid(op, unit, m), a, b, op(c, d))
+<a class="ln" id="L62" href="#L62">62</a>        = $alg!(`<span class="str">op, unit; a ⋆ (c ⋆ (b ⋆ d))</span>`) by left_commute(op, unit, m, b, c, d)
+<a class="ln" id="L63" href="#L63">63</a>        = $alg!(`<span class="str">op, unit; a ⋆ c ⋆ (b ⋆ d)</span>`) by assoc(op, unit, comm_monoid(op, unit, m), a, c, op(b, d)).
+<a class="ln" id="L64" href="#L64">64</a>    ```)
+<a class="ln" id="L65" href="#L65">65</a>}
+<a class="ln" id="L66" href="#L66">66</a>
+<a class="ln" id="L67" href="#L67">67</a><span class="com">// Generated by adjacent swaps, compatible heads, and transitivity.</span>
+<a class="ln" id="L68" href="#L68">68</a><span class="kw">pub(open)</span> <span class="kw">inductive</span> Permutation(A: Type): (List(A)) -&gt; (List(A)) -&gt; Prop {
+<a class="ln" id="L69" href="#L69">69</a>  Empty: <a href="#L68">Permutation</a>(A, Nil, Nil)
+<a class="ln" id="L70" href="#L70">70</a>  Keep(
+<a class="ln" id="L71" href="#L71">71</a>    x: A,
+<a class="ln" id="L72" href="#L72">72</a>    xs: List(A),
+<a class="ln" id="L73" href="#L73">73</a>    ys: List(A),
+<a class="ln" id="L74" href="#L74">74</a>    p: <a href="#L68">Permutation</a>(A, xs, ys)
+<a class="ln" id="L75" href="#L75">75</a>  ): <a href="#L68">Permutation</a>(A, Cons(x, xs), Cons(x, ys))
+<a class="ln" id="L76" href="#L76">76</a>  Swap(x: A, y: A, xs: List(A)): <a href="#L68">Permutation</a>(A, Cons(x, Cons(y, xs)), Cons(y, Cons(x, xs)))
+<a class="ln" id="L77" href="#L77">77</a>  Chain(
+<a class="ln" id="L78" href="#L78">78</a>    xs: List(A),
+<a class="ln" id="L79" href="#L79">79</a>    ys: List(A),
+<a class="ln" id="L80" href="#L80">80</a>    zs: List(A),
+<a class="ln" id="L81" href="#L81">81</a>    p: <a href="#L68">Permutation</a>(A, xs, ys),
+<a class="ln" id="L82" href="#L82">82</a>    q: <a href="#L68">Permutation</a>(A, ys, zs)
+<a class="ln" id="L83" href="#L83">83</a>  ): <a href="#L68">Permutation</a>(A, xs, zs)
+<a class="ln" id="L84" href="#L84">84</a>}
+<a class="ln" id="L85" href="#L85">85</a><span class="kw">pub</span> <span class="kw">theorem</span> product_permutation&lt;A&gt;(
+<a class="ln" id="L86" href="#L86">86</a>  op: (A, A) -&gt; A,
+<a class="ln" id="L87" href="#L87">87</a>  unit: A,
+<a class="ln" id="L88" href="#L88">88</a>  m: <a href="#L9">CommMonoid</a>(A, op, unit),
+<a class="ln" id="L89" href="#L89">89</a>  xs: List(A),
+<a class="ln" id="L90" href="#L90">90</a>  ys: List(A),
+<a class="ln" id="L91" href="#L91">91</a>  p: <a href="#L68">Permutation</a>(A, xs, ys)
+<a class="ln" id="L92" href="#L92">92</a>): <span class="mac">alg!</span>(`op, unit; <span class="fn">product</span>(op, <span class="num">ε</span>, xs) = <span class="fn">product</span>(op, <span class="num">ε</span>, ys)`) {
+<a class="ln" id="L93" href="#L93">93</a>  ⊢ <span class="mac">alg!</span>(`op, unit; <span class="fn">product</span>(op, <span class="num">ε</span>, xs) = <span class="fn">product</span>(op, <span class="num">ε</span>, ys)`) <span class="kw">from</span> <span class="kw">match</span> p {
+<a class="ln" id="L94" href="#L94">94</a>    Empty =&gt; Refl
+<a class="ln" id="L95" href="#L95">95</a>    Keep(x, as, bs, h) =&gt; Eq::congr(
+<a class="ln" id="L96" href="#L96">96</a>      (v: A) =&gt; <span class="mac">alg!</span>(`op, unit; x ⋆ v`),
+<a class="ln" id="L97" href="#L97">97</a>      product_permutation(op, unit, m, as, bs, h)
+<a class="ln" id="L98" href="#L98">98</a>    )
+<a class="ln" id="L99" href="#L99">99</a>    Swap(x, y, rest) =&gt; left_commute(op, unit, m, x, y, product(op, unit, rest))
+<a class="ln" id="L100" href="#L100">100</a>    Chain(as, bs, cs, p2, q2) =&gt; <span class="mac">calc!</span>(```
+<a class="ln" id="L101" href="#L101">101</a>      $alg!(`<span class="str">op, unit; product(op, ε, as)</span>`)
+<a class="ln" id="L102" href="#L102">102</a>      = $alg!(`<span class="str">op, unit; product(op, ε, bs)</span>`) <span class="kw">from</span> $<span class="fn">product_permutation</span>(<span class="var">op</span>, <span class="var">unit</span>, <span class="var">m</span>, as, bs, p2)
+<a class="ln" id="L103" href="#L103">103</a>      = $alg!(`<span class="str">op, unit; product(op, ε, cs)</span>`) <span class="kw">from</span> $<span class="fn">product_permutation</span>(<span class="var">op</span>, <span class="var">unit</span>, <span class="var">m</span>, bs, cs, q2)
+<a class="ln" id="L104" href="#L104">104</a>      ```)
+<a class="ln" id="L105" href="#L105">105</a>  }
+<a class="ln" id="L106" href="#L106">106</a>}
+<a class="ln" id="L107" href="#L107">107</a><span class="kw">pub</span> <span class="kw">theorem</span> power_product&lt;A&gt;(
+<a class="ln" id="L108" href="#L108">108</a>  op: (A, A) -&gt; A,
+<a class="ln" id="L109" href="#L109">109</a>  unit: A,
+<a class="ln" id="L110" href="#L110">110</a>  m: <a href="#L9">CommMonoid</a>(A, op, unit),
+<a class="ln" id="L111" href="#L111">111</a>  a: A,
+<a class="ln" id="L112" href="#L112">112</a>  b: A,
+<a class="ln" id="L113" href="#L113">113</a>  n: Nat
+<a class="ln" id="L114" href="#L114">114</a>): <span class="mac">alg!</span>(`op, unit; <span class="fn">power</span>(op, <span class="num">ε</span>, a ⋆ b, n) = <span class="fn">power</span>(op, <span class="num">ε</span>, a, n) ⋆ <span class="fn">power</span>(op, <span class="num">ε</span>, b, n)`) {
+<a class="ln" id="L115" href="#L115">115</a>  <span class="kw">let</span> base := <a href="#L15">comm_monoid</a>(op, unit, m)
+<a class="ln" id="L116" href="#L116">116</a>  <span class="mac">proof!</span>(```
+<a class="ln" id="L117" href="#L117">117</a>      <span class="kw">By</span> induction on n.
+<a class="ln" id="L118" href="#L118">118</a>        [zero] <span class="kw">Case</span> Zero. <span class="kw">By</span> Eq::sym.
+<a class="ln" id="L119" href="#L119">119</a>        <span class="kw">Case</span> Succ(k). <span class="kw">We</span> have $alg!(`<span class="str">op, unit; power(op, ε, a ⋆ b, k) ⋆ (a ⋆ b)</span>`)
+<a class="ln" id="L120" href="#L120">120</a>        = $alg!(`<span class="str">op, unit; (power(op, ε, a, k) ⋆ power(op, ε, b, k)) ⋆ (a ⋆ b)</span>`) by the induction hypothesis
+<a class="ln" id="L121" href="#L121">121</a>        = $alg!(`<span class="str">op, unit; power(op, ε, a, k) ⋆ a ⋆ (power(op, ε, b, k) ⋆ b)</span>`) by interchange(op, unit, m, power(op, unit, a, k), power(op, unit, b, k), a, b).
+<a class="ln" id="L122" href="#L122">122</a>      %%
+<a class="ln" id="L123" href="#L123">123</a>      [zero] <span class="fn">left_unit</span>(op, unit, base, unit)
+<a class="ln" id="L124" href="#L124">124</a>    ```)
+<a class="ln" id="L125" href="#L125">125</a>}
+<a class="ln" id="L126" href="#L126">126</a>
+<a class="ln" id="L127" href="#L127">127</a><span class="kw">pub</span> <span class="kw">theorem</span> permutation_refl&lt;A&gt;(xs: List(A)): <a href="#L68">Permutation</a>(A, xs, xs) {
+<a class="ln" id="L128" href="#L128">128</a>  ⊢ Permutation(A, xs, xs) <span class="kw">from</span> <span class="kw">match</span> xs {
+<a class="ln" id="L129" href="#L129">129</a>    Nil =&gt; Empty
+<a class="ln" id="L130" href="#L130">130</a>    Cons(x, rest) =&gt; Keep(x, rest, rest, permutation_refl(rest))
+<a class="ln" id="L131" href="#L131">131</a>  }
+<a class="ln" id="L132" href="#L132">132</a>}
+<a class="ln" id="L133" href="#L133">133</a><span class="kw">pub</span> <span class="kw">theorem</span> permutation_sym&lt;A&gt;(
+<a class="ln" id="L134" href="#L134">134</a>  xs: List(A),
+<a class="ln" id="L135" href="#L135">135</a>  ys: List(A),
+<a class="ln" id="L136" href="#L136">136</a>  p: <a href="#L68">Permutation</a>(A, xs, ys)
+<a class="ln" id="L137" href="#L137">137</a>): <a href="#L68">Permutation</a>(A, ys, xs) {
+<a class="ln" id="L138" href="#L138">138</a>  ⊢ Permutation(A, ys, xs) <span class="kw">from</span> <span class="kw">match</span> p {
+<a class="ln" id="L139" href="#L139">139</a>    Empty =&gt; Empty
+<a class="ln" id="L140" href="#L140">140</a>    Keep(x, as, bs, h) =&gt; Keep(x, bs, as, permutation_sym(as, bs, h))
+<a class="ln" id="L141" href="#L141">141</a>    Swap(x, y, rest) =&gt; Swap(y, x, rest)
+<a class="ln" id="L142" href="#L142">142</a>    Chain(as, bs, cs, h, k) =&gt; Chain(
+<a class="ln" id="L143" href="#L143">143</a>      cs,
+<a class="ln" id="L144" href="#L144">144</a>      bs,
+<a class="ln" id="L145" href="#L145">145</a>      as,
+<a class="ln" id="L146" href="#L146">146</a>      permutation_sym(bs, cs, k),
+<a class="ln" id="L147" href="#L147">147</a>      permutation_sym(as, bs, h)
+<a class="ln" id="L148" href="#L148">148</a>    )
+<a class="ln" id="L149" href="#L149">149</a>  }
+<a class="ln" id="L150" href="#L150">150</a>}
+</code></pre>
+</html>

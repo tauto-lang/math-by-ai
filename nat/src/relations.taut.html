@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/relations.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/relations.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::Base
+<a class="ln" id="L2" href="#L2">2</a><span class="kw">import</span> std::prelude::Macro
+<a class="ln" id="L3" href="#L3">3</a><span class="kw">import</span> core::highlight
+<a class="ln" id="L4" href="#L4">4</a><span class="kw">import</span> <span class="str">&quot;order.taut&quot;</span>
+<a class="ln" id="L5" href="#L5">5</a><span class="kw">import</span> <span class="str">&quot;divisibility.taut&quot;</span>
+<a class="ln" id="L6" href="#L6">6</a>
+<a class="ln" id="L7" href="#L7">7</a><span class="kw">pub</span> <span class="kw">fn</span> relation_tokens(ts: List(SynTok)): List(SynHighlight) ! {Div} { math_tokens(ts) }
+<a class="ln" id="L8" href="#L8">8</a>
+<a class="ln" id="L9" href="#L9">9</a><span class="kw">syntax!</span>(nat_relations, ```par
+<a class="ln" id="L10" href="#L10">10</a><span class="kw">%start</span> <span class="ty">Expr</span>
+<a class="ln" id="L11" href="#L11">11</a><span class="kw">%title</span> <span class="str">&quot;natural arithmetic&quot;</span>
+<a class="ln" id="L12" href="#L12">12</a><span class="kw">%%</span>
+<a class="ln" id="L13" href="#L13">13</a><span class="ty">Expr</span>: <span class="ty">Sum</span> <span class="ty">Relation</span> <span class="ty">Sum</span>;
+<a class="ln" id="L14" href="#L14">14</a><span class="ty">Relation</span>: <span class="ty">EqOp</span> | <span class="ty">LeOp</span> | <span class="ty">LtOp</span> | <span class="ty">DvdOp</span>;
+<a class="ln" id="L15" href="#L15">15</a><span class="ty">DvdOp</span>: <span class="str">'|'</span>;
+<a class="ln" id="L16" href="#L16">16</a><span class="ty">Sum</span>: <span class="ty">Prod</span> { <span class="ty">AddOp</span> <span class="ty">Prod</span> };
+<a class="ln" id="L17" href="#L17">17</a><span class="ty">AddOp</span>: <span class="ty">Plus</span> | <span class="ty">Minus</span>;
+<a class="ln" id="L18" href="#L18">18</a><span class="ty">Prod</span>: <span class="ty">Atom</span> { <span class="ty">Star</span> <span class="ty">Atom</span> };
+<a class="ln" id="L19" href="#L19">19</a><span class="ty">Atom</span>: <span class="ty">Num</span> | <span class="ty">Reference</span> | <span class="ty">Paren</span> | <span class="ty">Embed</span>;
+<a class="ln" id="L20" href="#L20">20</a><span class="ty">Reference</span>: <span class="ty">Name</span> [ <span class="ty">Arguments</span> ];
+<a class="ln" id="L21" href="#L21">21</a><span class="ty">Arguments</span>: <span class="ty">LParen</span> <span class="ty">Sum</span> { <span class="ty">Comma</span> <span class="ty">Sum</span> } <span class="ty">RParen</span>;
+<a class="ln" id="L22" href="#L22">22</a><span class="ty">Paren</span>: <span class="ty">LParen</span> <span class="ty">Sum</span> <span class="ty">RParen</span>;
+<a class="ln" id="L23" href="#L23">23</a><span class="ty">Embed</span>: <span class="ty">TautoExpr</span>;
+<a class="ln" id="L24" href="#L24">24</a><span class="ty">Name</span>: <span class="str">/[_\p{L}][_\p{L}\p{N}']*(::[_\p{L}][_\p{L}\p{N}']*)*/</span>;
+<a class="ln" id="L25" href="#L25">25</a><span class="ty">Num</span>: <span class="str">/[0-9]+/</span>;
+<a class="ln" id="L26" href="#L26">26</a><span class="ty">EqOp</span>: <span class="str">'='</span>;
+<a class="ln" id="L27" href="#L27">27</a><span class="ty">LeOp</span>: <span class="str">'≤'</span>;
+<a class="ln" id="L28" href="#L28">28</a><span class="ty">LtOp</span>: <span class="str">'&lt;'</span>;
+<a class="ln" id="L29" href="#L29">29</a><span class="ty">Plus</span>: <span class="str">'+'</span>;
+<a class="ln" id="L30" href="#L30">30</a><span class="ty">Minus</span>: <span class="str">'-'</span>;
+<a class="ln" id="L31" href="#L31">31</a><span class="ty">Star</span>: <span class="str">'*'</span>;
+<a class="ln" id="L32" href="#L32">32</a><span class="ty">Comma</span>: <span class="str">','</span>;
+<a class="ln" id="L33" href="#L33">33</a><span class="ty">LParen</span>: <span class="str">'('</span>;
+<a class="ln" id="L34" href="#L34">34</a><span class="ty">RParen</span>: <span class="str">')'</span>;
+<a class="ln" id="L35" href="#L35">35</a>```, <span class="kw">with</span>(tokens: relation_tokens)) =&gt; <span class="kw">struct</span> Expr, <span class="kw">enum</span> Relation,
+<a class="ln" id="L36" href="#L36">36</a>  <span class="kw">struct</span> Sum, <span class="kw">struct</span> Sum_Rep1, <span class="kw">enum</span> AddOp, <span class="kw">struct</span> Prod, <span class="kw">struct</span> Prod_Rep1,
+<a class="ln" id="L37" href="#L37">37</a>  <span class="kw">enum</span> Atom, <span class="kw">struct</span> Reference, <span class="kw">struct</span> Arguments, <span class="kw">struct</span> Arguments_Rep1, <span class="kw">struct</span> Paren, <span class="kw">fn</span> parse
+<a class="ln" id="L38" href="#L38">38</a>
+<a class="ln" id="L39" href="#L39">39</a><span class="kw">pub</span> <span class="kw">fn</span> relation_name(t: SynToken): SynExpr {
+<a class="ln" id="L40" href="#L40">40</a>  ExVar(Syn::ident(t))
+<a class="ln" id="L41" href="#L41">41</a>}
+<a class="ln" id="L42" href="#L42">42</a><span class="kw">pub</span> <span class="kw">fn</span> relation_arguments(
+<a class="ln" id="L43" href="#L43">43</a>  first: nat_relations::Sum,
+<a class="ln" id="L44" href="#L44">44</a>  rest: List(nat_relations::Arguments_Rep1)
+<a class="ln" id="L45" href="#L45">45</a>): List(SynExpr) ! {macro_error, Div} {
+<a class="ln" id="L46" href="#L46">46</a>  Cons(<a href="#L94">relation_sum</a>(first), <a href="#L48">relation_more_arguments</a>(rest))
+<a class="ln" id="L47" href="#L47">47</a>}
+<a class="ln" id="L48" href="#L48">48</a><span class="kw">pub</span> <span class="kw">fn</span> relation_more_arguments(
+<a class="ln" id="L49" href="#L49">49</a>  rest: List(nat_relations::Arguments_Rep1)
+<a class="ln" id="L50" href="#L50">50</a>): List(SynExpr) ! {macro_error, Div} {
+<a class="ln" id="L51" href="#L51">51</a>  <span class="kw">match</span> rest { Nil =&gt; Nil
+<a class="ln" id="L52" href="#L52">52</a>    Cons(r, more) =&gt; Cons(<a href="#L94">relation_sum</a>(r.sum), <a href="#L48">relation_more_arguments</a>(more)) }
+<a class="ln" id="L53" href="#L53">53</a>}
+<a class="ln" id="L54" href="#L54">54</a><span class="kw">pub</span> <span class="kw">fn</span> relation_atom(t: nat_relations::Atom): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L55" href="#L55">55</a>  <span class="kw">match</span> t {
+<a class="ln" id="L56" href="#L56">56</a>    Num(tok) =&gt; ExNat(tok.text, tok.span)
+<a class="ln" id="L57" href="#L57">57</a>    Reference(r) =&gt; <span class="kw">match</span> r.arguments {
+<a class="ln" id="L58" href="#L58">58</a>      None =&gt; <a href="#L39">relation_name</a>(r.name)
+<a class="ln" id="L59" href="#L59">59</a>      Some(args) =&gt; ExApp(<a href="#L39">relation_name</a>(r.name), <a href="#L42">relation_arguments</a>(args.sum, args.rep), r.span)
+<a class="ln" id="L60" href="#L60">60</a>    }
+<a class="ln" id="L61" href="#L61">61</a>    Paren(p) =&gt; <a href="#L94">relation_sum</a>(p.sum)
+<a class="ln" id="L62" href="#L62">62</a>    Embed(e) =&gt; e
+<a class="ln" id="L63" href="#L63">63</a>  }
+<a class="ln" id="L64" href="#L64">64</a>}
+<a class="ln" id="L65" href="#L65">65</a><span class="kw">pub</span> <span class="kw">fn</span> relation_factors(
+<a class="ln" id="L66" href="#L66">66</a>  acc: SynExpr,
+<a class="ln" id="L67" href="#L67">67</a>  rest: List(nat_relations::Prod_Rep1)
+<a class="ln" id="L68" href="#L68">68</a>): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L69" href="#L69">69</a>  <span class="kw">match</span> rest { Nil =&gt; acc
+<a class="ln" id="L70" href="#L70">70</a>    Cons(r, more) =&gt; {
+<a class="ln" id="L71" href="#L71">71</a>      <span class="kw">let</span> t := relation_atom(r.atom)
+<a class="ln" id="L72" href="#L72">72</a>      relation_factors(<span class="kw">quote</span> { Nat::mul($acc, $t) }, more)
+<a class="ln" id="L73" href="#L73">73</a>    }
+<a class="ln" id="L74" href="#L74">74</a>  }
+<a class="ln" id="L75" href="#L75">75</a>}
+<a class="ln" id="L76" href="#L76">76</a><span class="kw">pub</span> <span class="kw">fn</span> relation_product(p: nat_relations::Prod): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L77" href="#L77">77</a>  <a href="#L65">relation_factors</a>(<a href="#L54">relation_atom</a>(p.atom), p.rep)
+<a class="ln" id="L78" href="#L78">78</a>}
+<a class="ln" id="L79" href="#L79">79</a><span class="kw">pub</span> <span class="kw">fn</span> relation_summands(
+<a class="ln" id="L80" href="#L80">80</a>  acc: SynExpr,
+<a class="ln" id="L81" href="#L81">81</a>  rest: List(nat_relations::Sum_Rep1)
+<a class="ln" id="L82" href="#L82">82</a>): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L83" href="#L83">83</a>  <span class="kw">match</span> rest { Nil =&gt; acc
+<a class="ln" id="L84" href="#L84">84</a>    Cons(r, more) =&gt; {
+<a class="ln" id="L85" href="#L85">85</a>      <span class="kw">let</span> t := relation_product(r.prod)
+<a class="ln" id="L86" href="#L86">86</a>      <span class="kw">let</span> next := <span class="kw">match</span> r.add_op {
+<a class="ln" id="L87" href="#L87">87</a>        Plus(tok) =&gt; <span class="kw">quote</span> { Nat::add($acc, $t) }
+<a class="ln" id="L88" href="#L88">88</a>        Minus(tok) =&gt; <span class="kw">quote</span> { Nat::sub($acc, $t) }
+<a class="ln" id="L89" href="#L89">89</a>      }
+<a class="ln" id="L90" href="#L90">90</a>      relation_summands(next, more)
+<a class="ln" id="L91" href="#L91">91</a>    }
+<a class="ln" id="L92" href="#L92">92</a>  }
+<a class="ln" id="L93" href="#L93">93</a>}
+<a class="ln" id="L94" href="#L94">94</a><span class="kw">pub</span> <span class="kw">fn</span> relation_sum(s: nat_relations::Sum): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L95" href="#L95">95</a>  <a href="#L79">relation_summands</a>(<a href="#L76">relation_product</a>(s.prod), s.rep)
+<a class="ln" id="L96" href="#L96">96</a>}
+<a class="ln" id="L97" href="#L97">97</a><span class="kw">pub</span> <span class="kw">fn</span> relation_expression(e: nat_relations::Expr): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L98" href="#L98">98</a>  <span class="kw">let</span> l := <a href="#L94">relation_sum</a>(e.sum)
+<a class="ln" id="L99" href="#L99">99</a>  <span class="kw">let</span> b := <a href="#L94">relation_sum</a>(e.sum_2)
+<a class="ln" id="L100" href="#L100">100</a>  <span class="kw">match</span> e.relation {
+<a class="ln" id="L101" href="#L101">101</a>    EqOp(tok) =&gt; <span class="kw">quote</span> { Eq(Nat, $l, $b) }
+<a class="ln" id="L102" href="#L102">102</a>    LeOp(tok) =&gt; <span class="kw">quote</span> { <a href="../src/order.taut.html#L6">nat_below</a>($l, $b) }
+<a class="ln" id="L103" href="#L103">103</a>    LtOp(tok) =&gt; <span class="kw">quote</span> { Eq(Bool, Nat::lt($l, $b), <span class="kw">true</span>) }
+<a class="ln" id="L104" href="#L104">104</a>    DvdOp(tok) =&gt; <span class="kw">quote</span> { <a href="../src/divisibility.taut.html#L11">Divides</a>($l, $b) }
+<a class="ln" id="L105" href="#L105">105</a>  }
+<a class="ln" id="L106" href="#L106">106</a>}
+<a class="ln" id="L107" href="#L107">107</a><span class="kw">pub</span> <span class="kw">macro</span> <span class="kw">fn</span> nat_rel(
+<a class="ln" id="L108" href="#L108">108</a>  e: nat_relations::Expr
+<a class="ln" id="L109" href="#L109">109</a>): SynExpr ! {macro_error, Div} { <a href="#L97">relation_expression</a>(e) }
+</code></pre>
+</html>

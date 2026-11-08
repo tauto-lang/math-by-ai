@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/subtraction.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/subtraction.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::Calc { calc }
+<a class="ln" id="L2" href="#L2">2</a><span class="kw">import</span> std::Base
+<a class="ln" id="L3" href="#L3">3</a><span class="kw">import</span> std::Nat
+<a class="ln" id="L4" href="#L4">4</a><span class="kw">import</span> std::IntLaws
+<a class="ln" id="L5" href="#L5">5</a><span class="kw">import</span> <span class="str">&quot;notation.taut&quot;</span>
+<a class="ln" id="L6" href="#L6">6</a><span class="kw">import</span> <span class="str">&quot;relations.taut&quot;</span>
+<a class="ln" id="L7" href="#L7">7</a><span class="kw">import</span> <span class="str">&quot;divisibility.taut&quot;</span>
+<a class="ln" id="L8" href="#L8">8</a>
+<a class="ln" id="L9" href="#L9">9</a><span class="kw">pub</span> <span class="kw">theorem</span> sub_common_right(a: Nat, b: Nat, c: Nat): <span class="mac">nat!</span>(`a + c - (b + c) = a - b`) {
+<a class="ln" id="L10" href="#L10">10</a>  ⊢ <span class="mac">nat!</span>(`a + c - (b + c) = a - b`) <span class="kw">from</span> <span class="kw">match</span> c {
+<a class="ln" id="L11" href="#L11">11</a>    Zero =&gt; Refl
+<a class="ln" id="L12" href="#L12">12</a>    Succ(k) =&gt; <span class="mac">calc!</span>(```
+<a class="ln" id="L13" href="#L13">13</a>      $nat!(`<span class="str">(a + Succ(k)) - (b + Succ(k))</span>`)
+<a class="ln" id="L14" href="#L14">14</a>      = $nat!(`<span class="str">(a + k) - (b + k)</span>`) <span class="kw">from</span> $<span class="ty">Nat::sub_succ_succ</span>(nat!(`<span class="str">a + k</span>`), nat!(`<span class="str">b + k</span>`))
+<a class="ln" id="L15" href="#L15">15</a>      = $nat!(`<span class="str">a - b</span>`) <span class="kw">from</span> $<span class="fn">sub_common_right</span>(<span class="var">a</span>, <span class="var">b</span>, k)
+<a class="ln" id="L16" href="#L16">16</a>      ```)
+<a class="ln" id="L17" href="#L17">17</a>  }
+<a class="ln" id="L18" href="#L18">18</a>}
+<a class="ln" id="L19" href="#L19">19</a><span class="kw">pub</span> <span class="kw">theorem</span> mul_subtract(a: Nat, k: Nat, l: Nat): <span class="mac">nat!</span>(`a * (k - l) = a * k - a * l`) {
+<a class="ln" id="L20" href="#L20">20</a>  ⊢ <span class="mac">nat!</span>(`a * (k - l) = a * k - a * l`) <span class="kw">from</span> <span class="kw">match</span> k {
+<a class="ln" id="L21" href="#L21">21</a>    Zero =&gt; Eq::trans(
+<a class="ln" id="L22" href="#L22">22</a>      Eq::congr((x: Nat) =&gt; <span class="mac">nat!</span>(`a * x`), Nat::sub_zero_left(l)),
+<a class="ln" id="L23" href="#L23">23</a>      Eq::trans(
+<a class="ln" id="L24" href="#L24">24</a>        Nat::mul_zero_right(a),
+<a class="ln" id="L25" href="#L25">25</a>        Eq::sym(
+<a class="ln" id="L26" href="#L26">26</a>          Eq::trans(
+<a class="ln" id="L27" href="#L27">27</a>            Eq::congr((x: Nat) =&gt; <span class="mac">nat!</span>(`x - a * l`), Nat::mul_zero_right(a)),
+<a class="ln" id="L28" href="#L28">28</a>            Nat::sub_zero_left(<span class="mac">nat!</span>(`a * l`))
+<a class="ln" id="L29" href="#L29">29</a>          )
+<a class="ln" id="L30" href="#L30">30</a>        )
+<a class="ln" id="L31" href="#L31">31</a>      )
+<a class="ln" id="L32" href="#L32">32</a>    )
+<a class="ln" id="L33" href="#L33">33</a>    Succ(j) =&gt; ⊢ <span class="mac">nat!</span>(`a * (<span class="fn">Succ</span>(j) - l) = a * <span class="fn">Succ</span>(j) - a * l`) <span class="kw">from</span> <span class="kw">match</span> l {
+<a class="ln" id="L34" href="#L34">34</a>      Zero =&gt; Eq::sym(Eq::congr((x: Nat) =&gt; <span class="mac">nat!</span>(`a * <span class="fn">Succ</span>(j) - x`), Nat::mul_zero_right(a)))
+<a class="ln" id="L35" href="#L35">35</a>      Succ(i) =&gt; Eq::trans(
+<a class="ln" id="L36" href="#L36">36</a>        Eq::congr((x: Nat) =&gt; <span class="mac">nat!</span>(`a * x`), Nat::sub_succ_succ(j, i)),
+<a class="ln" id="L37" href="#L37">37</a>        Eq::trans(
+<a class="ln" id="L38" href="#L38">38</a>          mul_subtract(a, j, i),
+<a class="ln" id="L39" href="#L39">39</a>          Eq::sym(
+<a class="ln" id="L40" href="#L40">40</a>            Eq::trans(
+<a class="ln" id="L41" href="#L41">41</a>              Eq::congr((x: Nat) =&gt; <span class="mac">nat!</span>(`x - a * <span class="fn">Succ</span>(i)`), Nat::mul_succ_right(a, j)),
+<a class="ln" id="L42" href="#L42">42</a>              Eq::trans(
+<a class="ln" id="L43" href="#L43">43</a>                Eq::congr((x: Nat) =&gt; <span class="mac">nat!</span>(`a * j + a - x`), Nat::mul_succ_right(a, i)),
+<a class="ln" id="L44" href="#L44">44</a>                sub_common_right(<span class="mac">nat!</span>(`a * j`), <span class="mac">nat!</span>(`a * i`), a)
+<a class="ln" id="L45" href="#L45">45</a>              )
+<a class="ln" id="L46" href="#L46">46</a>            )
+<a class="ln" id="L47" href="#L47">47</a>          )
+<a class="ln" id="L48" href="#L48">48</a>        )
+<a class="ln" id="L49" href="#L49">49</a>      )
+<a class="ln" id="L50" href="#L50">50</a>    }
+<a class="ln" id="L51" href="#L51">51</a>  }
+<a class="ln" id="L52" href="#L52">52</a>}
+<a class="ln" id="L53" href="#L53">53</a><span class="kw">pub</span> <span class="kw">theorem</span> divides_subtract(
+<a class="ln" id="L54" href="#L54">54</a>  a: Nat,
+<a class="ln" id="L55" href="#L55">55</a>  b: Nat,
+<a class="ln" id="L56" href="#L56">56</a>  c: Nat,
+<a class="ln" id="L57" href="#L57">57</a>  ab: <span class="mac">nat_rel!</span>(`a | b`),
+<a class="ln" id="L58" href="#L58">58</a>  ac: <span class="mac">nat_rel!</span>(`a | c`)
+<a class="ln" id="L59" href="#L59">59</a>): <span class="mac">nat_rel!</span>(`a | b - c`) {
+<a class="ln" id="L60" href="#L60">60</a>  ⊢ <span class="mac">nat_rel!</span>(`a | b - c`) <span class="kw">from</span> <span class="kw">match</span> ab {
+<a class="ln" id="L61" href="#L61">61</a>    By(k, hk) =&gt; ⊢ <span class="mac">nat_rel!</span>(`a | b - c`) <span class="kw">from</span> <span class="kw">match</span> ac {
+<a class="ln" id="L62" href="#L62">62</a>      By(l, hl) =&gt; By(
+<a class="ln" id="L63" href="#L63">63</a>        <span class="mac">nat!</span>(`k - l`),
+<a class="ln" id="L64" href="#L64">64</a>        <span class="mac">calc!</span>(```
+<a class="ln" id="L65" href="#L65">65</a>          $nat!(`<span class="str">a * (k - l)</span>`)
+<a class="ln" id="L66" href="#L66">66</a>          = $nat!(`<span class="str">a * k - a * l</span>`) <span class="kw">from</span> $<span class="fn">mul_subtract</span>(<span class="var">a</span>, k, l)
+<a class="ln" id="L67" href="#L67">67</a>          = $nat!(`<span class="str">b - a * l</span>`) <span class="kw">from</span> $<span class="ty">Eq::congr</span>((<span class="var">x</span>: <span class="ty">Nat</span>) =&gt; nat!(`<span class="str">x - a * l</span>`), hk)
+<a class="ln" id="L68" href="#L68">68</a>          = $nat!(`<span class="str">b - c</span>`) <span class="kw">from</span> $<span class="ty">Eq::congr</span>((<span class="var">x</span>: <span class="ty">Nat</span>) =&gt; nat!(`<span class="str">b - x</span>`), hl)
+<a class="ln" id="L69" href="#L69">69</a>          ```)
+<a class="ln" id="L70" href="#L70">70</a>      )
+<a class="ln" id="L71" href="#L71">71</a>    }
+<a class="ln" id="L72" href="#L72">72</a>  }
+<a class="ln" id="L73" href="#L73">73</a>}
+<a class="ln" id="L74" href="#L74">74</a><span class="kw">pub</span> <span class="kw">theorem</span> sub_sum_left(a: Nat, b: Nat): <span class="mac">nat!</span>(`a + b - a = b`) {
+<a class="ln" id="L75" href="#L75">75</a>  ⊢ <span class="mac">nat!</span>(`a + b - a = b`) <span class="kw">from</span> <span class="kw">match</span> a {
+<a class="ln" id="L76" href="#L76">76</a>    Zero =&gt; Nat::add_zero_left(b)
+<a class="ln" id="L77" href="#L77">77</a>    Succ(k) =&gt; <span class="mac">calc!</span>(```
+<a class="ln" id="L78" href="#L78">78</a>      $nat!(`<span class="str">Succ(k) + b - Succ(k)</span>`)
+<a class="ln" id="L79" href="#L79">79</a>      = $nat!(`<span class="str">Succ(k + b) - Succ(k)</span>`) <span class="kw">from</span> $<span class="ty">Eq::congr</span>(
+<a class="ln" id="L80" href="#L80">80</a>        (<span class="var">x</span>: <span class="ty">Nat</span>) =&gt; nat!(`<span class="str">x - Succ(k)</span>`),
+<a class="ln" id="L81" href="#L81">81</a>        <span class="ty">Nat::add_succ_left</span>(k, <span class="var">b</span>)
+<a class="ln" id="L82" href="#L82">82</a>      )
+<a class="ln" id="L83" href="#L83">83</a>      = $nat!(`<span class="str">k + b - k</span>`) <span class="kw">from</span> $<span class="ty">Nat::sub_succ_succ</span>(nat!(`<span class="str">k + b</span>`), k)
+<a class="ln" id="L84" href="#L84">84</a>      = $<span class="var">b</span> <span class="kw">from</span> $<span class="fn">sub_sum_left</span>(k, <span class="var">b</span>)
+<a class="ln" id="L85" href="#L85">85</a>      ```)
+<a class="ln" id="L86" href="#L86">86</a>  }
+<a class="ln" id="L87" href="#L87">87</a>}
+</code></pre>
+</html>

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/semiring_notation.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/semiring_notation.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::Base
+<a class="ln" id="L2" href="#L2">2</a><span class="kw">import</span> std::prelude::Macro
+<a class="ln" id="L3" href="#L3">3</a><span class="kw">import</span> core::highlight
+<a class="ln" id="L4" href="#L4">4</a>
+<a class="ln" id="L5" href="#L5">5</a><span class="kw">pub</span> <span class="kw">fn</span> semiring_tokens(ts: List(SynTok)): List(SynHighlight) ! {Div} { math_tokens(ts) }
+<a class="ln" id="L6" href="#L6">6</a>
+<a class="ln" id="L7" href="#L7">7</a><span class="kw">syntax!</span>(semiring_notation, ```par
+<a class="ln" id="L8" href="#L8">8</a><span class="kw">%start</span> <span class="ty">Expr</span>
+<a class="ln" id="L9" href="#L9">9</a><span class="kw">%title</span> <span class="str">&quot;semiring expressions&quot;</span>
+<a class="ln" id="L10" href="#L10">10</a><span class="kw">%%</span>
+<a class="ln" id="L11" href="#L11">11</a><span class="ty">Expr</span>: <span class="ty">Header</span> <span class="ty">Comma</span> <span class="ty">Header</span> <span class="ty">Comma</span> <span class="ty">Header</span> <span class="ty">Comma</span> <span class="ty">Header</span> <span class="ty">Semi</span> <span class="ty">Formula</span>;
+<a class="ln" id="L12" href="#L12">12</a><span class="ty">Header</span>: <span class="ty">Name</span> | <span class="ty">Embed</span>;
+<a class="ln" id="L13" href="#L13">13</a><span class="ty">Formula</span>: <span class="ty">Sum</span> [ <span class="ty">Equals</span> <span class="ty">Sum</span> ];
+<a class="ln" id="L14" href="#L14">14</a><span class="ty">Sum</span>: <span class="ty">Prod</span> { <span class="ty">Plus</span> <span class="ty">Prod</span> };
+<a class="ln" id="L15" href="#L15">15</a><span class="ty">Prod</span>: <span class="ty">Atom</span> { <span class="ty">Star</span> <span class="ty">Atom</span> };
+<a class="ln" id="L16" href="#L16">16</a><span class="ty">Atom</span>: <span class="ty">ZeroLit</span> | <span class="ty">OneLit</span> | <span class="ty">Reference</span> | <span class="ty">Paren</span> | <span class="ty">Embed</span>;
+<a class="ln" id="L17" href="#L17">17</a><span class="ty">Reference</span>: <span class="ty">Name</span> [ <span class="ty">Arguments</span> ];
+<a class="ln" id="L18" href="#L18">18</a><span class="ty">Arguments</span>: <span class="ty">LParen</span> <span class="ty">Sum</span> { <span class="ty">Comma</span> <span class="ty">Sum</span> } <span class="ty">RParen</span>;
+<a class="ln" id="L19" href="#L19">19</a><span class="ty">Paren</span>: <span class="ty">LParen</span> <span class="ty">Sum</span> <span class="ty">RParen</span>;
+<a class="ln" id="L20" href="#L20">20</a><span class="ty">Embed</span>: <span class="ty">TautoExpr</span>;
+<a class="ln" id="L21" href="#L21">21</a><span class="ty">Name</span>: <span class="str">/[_\p{L}][_\p{L}\p{N}']*(::[_\p{L}][_\p{L}\p{N}']*)*/</span>;
+<a class="ln" id="L22" href="#L22">22</a><span class="ty">ZeroLit</span>: <span class="str">'0'</span>;
+<a class="ln" id="L23" href="#L23">23</a><span class="ty">OneLit</span>: <span class="str">'1'</span>;
+<a class="ln" id="L24" href="#L24">24</a><span class="ty">Plus</span>: <span class="str">'+'</span>;
+<a class="ln" id="L25" href="#L25">25</a><span class="ty">Star</span>: <span class="str">'*'</span>;
+<a class="ln" id="L26" href="#L26">26</a><span class="ty">Comma</span>: <span class="str">','</span>;
+<a class="ln" id="L27" href="#L27">27</a><span class="ty">Semi</span>: <span class="str">';'</span>;
+<a class="ln" id="L28" href="#L28">28</a><span class="ty">Equals</span>: <span class="str">'='</span>;
+<a class="ln" id="L29" href="#L29">29</a><span class="ty">LParen</span>: <span class="str">'('</span>;
+<a class="ln" id="L30" href="#L30">30</a><span class="ty">RParen</span>: <span class="str">')'</span>;
+<a class="ln" id="L31" href="#L31">31</a>```, <span class="kw">with</span>(tokens: semiring_tokens)) =&gt; <span class="kw">struct</span> Expr, <span class="kw">enum</span> Header, <span class="kw">struct</span> Formula, <span class="kw">struct</span> Formula_Opt1, <span class="kw">struct</span> Sum, <span class="kw">struct</span> Sum_Rep1, <span class="kw">struct</span> Prod, <span class="kw">struct</span> Prod_Rep1, <span class="kw">enum</span> Atom, <span class="kw">struct</span> Reference, <span class="kw">struct</span> Arguments, <span class="kw">struct</span> Arguments_Rep1, <span class="kw">struct</span> Paren, <span class="kw">fn</span> parse
+<a class="ln" id="L32" href="#L32">32</a>
+<a class="ln" id="L33" href="#L33">33</a><span class="kw">pub</span> <span class="kw">fn</span> semiring_name(
+<a class="ln" id="L34" href="#L34">34</a>  t: SynToken
+<a class="ln" id="L35" href="#L35">35</a>): SynExpr { ExVar(Syn::ident(t)) }
+<a class="ln" id="L36" href="#L36">36</a><span class="kw">pub</span> <span class="kw">fn</span> semiring_header(h: semiring_notation::Header): SynExpr {
+<a class="ln" id="L37" href="#L37">37</a>  <span class="kw">match</span> h { Name(t) =&gt; <a href="#L33">semiring_name</a>(t)
+<a class="ln" id="L38" href="#L38">38</a>    Embed(e) =&gt; e }
+<a class="ln" id="L39" href="#L39">39</a>}
+<a class="ln" id="L40" href="#L40">40</a><span class="kw">pub</span> <span class="kw">fn</span> semiring_atom(
+<a class="ln" id="L41" href="#L41">41</a>  t: semiring_notation::Atom,
+<a class="ln" id="L42" href="#L42">42</a>  add: SynExpr,
+<a class="ln" id="L43" href="#L43">43</a>  zero: SynExpr,
+<a class="ln" id="L44" href="#L44">44</a>  mul: SynExpr,
+<a class="ln" id="L45" href="#L45">45</a>  one: SynExpr
+<a class="ln" id="L46" href="#L46">46</a>): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L47" href="#L47">47</a>  <span class="kw">match</span> t {
+<a class="ln" id="L48" href="#L48">48</a>    ZeroLit(tok) =&gt; zero
+<a class="ln" id="L49" href="#L49">49</a>    OneLit(tok) =&gt; one
+<a class="ln" id="L50" href="#L50">50</a>    Embed(e) =&gt; e
+<a class="ln" id="L51" href="#L51">51</a>    Paren(p) =&gt; <a href="#L113">semiring_sum</a>(p.sum, add, zero, mul, one)
+<a class="ln" id="L52" href="#L52">52</a>    Reference(r) =&gt; <span class="kw">match</span> r.arguments {
+<a class="ln" id="L53" href="#L53">53</a>      None =&gt; <a href="#L33">semiring_name</a>(r.name)
+<a class="ln" id="L54" href="#L54">54</a>      Some(args) =&gt; ExApp(
+<a class="ln" id="L55" href="#L55">55</a>        <a href="#L33">semiring_name</a>(r.name),
+<a class="ln" id="L56" href="#L56">56</a>        Cons(
+<a class="ln" id="L57" href="#L57">57</a>          <a href="#L113">semiring_sum</a>(args.sum, add, zero, mul, one),
+<a class="ln" id="L58" href="#L58">58</a>          <a href="#L65">semiring_args</a>(args.rep, add, zero, mul, one)
+<a class="ln" id="L59" href="#L59">59</a>        ),
+<a class="ln" id="L60" href="#L60">60</a>        r.span
+<a class="ln" id="L61" href="#L61">61</a>      )
+<a class="ln" id="L62" href="#L62">62</a>    }
+<a class="ln" id="L63" href="#L63">63</a>  }
+<a class="ln" id="L64" href="#L64">64</a>}
+<a class="ln" id="L65" href="#L65">65</a><span class="kw">pub</span> <span class="kw">fn</span> semiring_args(
+<a class="ln" id="L66" href="#L66">66</a>  xs: List(semiring_notation::Arguments_Rep1),
+<a class="ln" id="L67" href="#L67">67</a>  add: SynExpr,
+<a class="ln" id="L68" href="#L68">68</a>  zero: SynExpr,
+<a class="ln" id="L69" href="#L69">69</a>  mul: SynExpr,
+<a class="ln" id="L70" href="#L70">70</a>  one: SynExpr
+<a class="ln" id="L71" href="#L71">71</a>): List(SynExpr) ! {macro_error, Div} {
+<a class="ln" id="L72" href="#L72">72</a>  <span class="kw">match</span> xs { Nil =&gt; Nil
+<a class="ln" id="L73" href="#L73">73</a>    Cons(x, rest) =&gt; Cons(
+<a class="ln" id="L74" href="#L74">74</a>      <a href="#L113">semiring_sum</a>(x.sum, add, zero, mul, one),
+<a class="ln" id="L75" href="#L75">75</a>      <a href="#L65">semiring_args</a>(rest, add, zero, mul, one)
+<a class="ln" id="L76" href="#L76">76</a>    ) }
+<a class="ln" id="L77" href="#L77">77</a>}
+<a class="ln" id="L78" href="#L78">78</a><span class="kw">pub</span> <span class="kw">fn</span> semiring_factors(
+<a class="ln" id="L79" href="#L79">79</a>  acc: SynExpr,
+<a class="ln" id="L80" href="#L80">80</a>  xs: List(semiring_notation::Prod_Rep1),
+<a class="ln" id="L81" href="#L81">81</a>  add: SynExpr,
+<a class="ln" id="L82" href="#L82">82</a>  zero: SynExpr,
+<a class="ln" id="L83" href="#L83">83</a>  mul: SynExpr,
+<a class="ln" id="L84" href="#L84">84</a>  one: SynExpr
+<a class="ln" id="L85" href="#L85">85</a>): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L86" href="#L86">86</a>  <span class="kw">match</span> xs { Nil =&gt; acc
+<a class="ln" id="L87" href="#L87">87</a>    Cons(x, rest) =&gt; { <span class="kw">let</span> b := semiring_atom(x.atom, add, zero, mul, one)
+<a class="ln" id="L88" href="#L88">88</a>      semiring_factors(<span class="kw">quote</span> { $mul($acc, $b) }, rest, add, zero, mul, one) }
+<a class="ln" id="L89" href="#L89">89</a>  }
+<a class="ln" id="L90" href="#L90">90</a>}
+<a class="ln" id="L91" href="#L91">91</a><span class="kw">pub</span> <span class="kw">fn</span> semiring_product(
+<a class="ln" id="L92" href="#L92">92</a>  p: semiring_notation::Prod,
+<a class="ln" id="L93" href="#L93">93</a>  add: SynExpr,
+<a class="ln" id="L94" href="#L94">94</a>  zero: SynExpr,
+<a class="ln" id="L95" href="#L95">95</a>  mul: SynExpr,
+<a class="ln" id="L96" href="#L96">96</a>  one: SynExpr
+<a class="ln" id="L97" href="#L97">97</a>): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L98" href="#L98">98</a>  <a href="#L78">semiring_factors</a>(<a href="#L40">semiring_atom</a>(p.atom, add, zero, mul, one), p.rep, add, zero, mul, one)
+<a class="ln" id="L99" href="#L99">99</a>}
+<a class="ln" id="L100" href="#L100">100</a><span class="kw">pub</span> <span class="kw">fn</span> semiring_summands(
+<a class="ln" id="L101" href="#L101">101</a>  acc: SynExpr,
+<a class="ln" id="L102" href="#L102">102</a>  xs: List(semiring_notation::Sum_Rep1),
+<a class="ln" id="L103" href="#L103">103</a>  add: SynExpr,
+<a class="ln" id="L104" href="#L104">104</a>  zero: SynExpr,
+<a class="ln" id="L105" href="#L105">105</a>  mul: SynExpr,
+<a class="ln" id="L106" href="#L106">106</a>  one: SynExpr
+<a class="ln" id="L107" href="#L107">107</a>): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L108" href="#L108">108</a>  <span class="kw">match</span> xs { Nil =&gt; acc
+<a class="ln" id="L109" href="#L109">109</a>    Cons(x, rest) =&gt; { <span class="kw">let</span> b := semiring_product(x.prod, add, zero, mul, one)
+<a class="ln" id="L110" href="#L110">110</a>      semiring_summands(<span class="kw">quote</span> { $add($acc, $b) }, rest, add, zero, mul, one) }
+<a class="ln" id="L111" href="#L111">111</a>  }
+<a class="ln" id="L112" href="#L112">112</a>}
+<a class="ln" id="L113" href="#L113">113</a><span class="kw">pub</span> <span class="kw">fn</span> semiring_sum(
+<a class="ln" id="L114" href="#L114">114</a>  s: semiring_notation::Sum,
+<a class="ln" id="L115" href="#L115">115</a>  add: SynExpr,
+<a class="ln" id="L116" href="#L116">116</a>  zero: SynExpr,
+<a class="ln" id="L117" href="#L117">117</a>  mul: SynExpr,
+<a class="ln" id="L118" href="#L118">118</a>  one: SynExpr
+<a class="ln" id="L119" href="#L119">119</a>): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L120" href="#L120">120</a>  <a href="#L100">semiring_summands</a>(<a href="#L91">semiring_product</a>(s.prod, add, zero, mul, one), s.rep, add, zero, mul, one)
+<a class="ln" id="L121" href="#L121">121</a>}
+<a class="ln" id="L122" href="#L122">122</a><span class="kw">pub</span> <span class="kw">macro</span> <span class="kw">fn</span> semiring(e: semiring_notation::Expr): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L123" href="#L123">123</a>  <span class="kw">let</span> add := <a href="#L36">semiring_header</a>(e.header)
+<a class="ln" id="L124" href="#L124">124</a>  <span class="kw">let</span> zero := <a href="#L36">semiring_header</a>(e.header_2)
+<a class="ln" id="L125" href="#L125">125</a>  <span class="kw">let</span> mul := <a href="#L36">semiring_header</a>(e.header_3)
+<a class="ln" id="L126" href="#L126">126</a>  <span class="kw">let</span> one := <a href="#L36">semiring_header</a>(e.header_4)
+<a class="ln" id="L127" href="#L127">127</a>  <span class="kw">let</span> left := <a href="#L113">semiring_sum</a>(e.formula.sum, add, zero, mul, one)
+<a class="ln" id="L128" href="#L128">128</a>  <span class="kw">match</span> e.formula.opt { None =&gt; left
+<a class="ln" id="L129" href="#L129">129</a>    Some(r) =&gt; { <span class="kw">let</span> right := semiring_sum(r.sum, add, zero, mul, one)
+<a class="ln" id="L130" href="#L130">130</a>      <span class="kw">quote</span> { $left = $right } }
+<a class="ln" id="L131" href="#L131">131</a>  }
+<a class="ln" id="L132" href="#L132">132</a>}
+</code></pre>
+</html>

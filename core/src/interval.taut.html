@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/interval.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/interval.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::Base
+<a class="ln" id="L2" href="#L2">2</a><span class="kw">import</span> std::Rat
+<a class="ln" id="L3" href="#L3">3</a><span class="kw">import</span> std::RatLaws
+<a class="ln" id="L4" href="#L4">4</a><span class="kw">import</span> <span class="str">&quot;rational_order.taut&quot;</span>
+<a class="ln" id="L5" href="#L5">5</a><span class="kw">import</span> std::proof::Lang { proof }
+<a class="ln" id="L6" href="#L6">6</a><span class="kw">import</span> std::proof::Forms { proof_by, proof_case }
+<a class="ln" id="L7" href="#L7">7</a>
+<a class="ln" id="L8" href="#L8">8</a><span class="kw">pub(open)</span> <span class="kw">inductive</span> Interval: Type {
+<a class="ln" id="L9" href="#L9">9</a>  Between(left: Rat, right: Rat, positive: <a href="../src/rational_order.taut.html#L9">RationalLt</a>(left, right)): <a href="#L8">Interval</a>
+<a class="ln" id="L10" href="#L10">10</a>}
+<a class="ln" id="L11" href="#L11">11</a><span class="kw">pub</span> <span class="kw">fn</span> left(i: <a href="#L8">Interval</a>): Rat { ⊢ Rat <span class="kw">from</span> <span class="kw">match</span> i { Between(a, b, h) =&gt; a } }
+<a class="ln" id="L12" href="#L12">12</a><span class="kw">pub</span> <span class="kw">fn</span> right(i: <a href="#L8">Interval</a>): Rat { ⊢ Rat <span class="kw">from</span> <span class="kw">match</span> i { Between(a, b, h) =&gt; b } }
+<a class="ln" id="L13" href="#L13">13</a><span class="kw">pub</span> <span class="kw">theorem</span> interval_positive(i: <a href="#L8">Interval</a>): <a href="../src/rational_order.taut.html#L9">RationalLt</a>(<a href="#L11">left</a>(i), <a href="#L12">right</a>(i)) {
+<a class="ln" id="L14" href="#L14">14</a>  ⊢ RationalLt(left(i), right(i)) <span class="kw">from</span> <span class="kw">match</span> i { Between(a, b, h) =&gt; h }
+<a class="ln" id="L15" href="#L15">15</a>}
+<a class="ln" id="L16" href="#L16">16</a><span class="kw">pub</span> <span class="kw">fn</span> middle(i: <a href="#L8">Interval</a>): Rat { <a href="../src/rational_order.taut.html#L79">rational_between</a>(<a href="#L11">left</a>(i), <a href="#L12">right</a>(i)) }
+<a class="ln" id="L17" href="#L17">17</a><span class="kw">pub</span> <span class="kw">theorem</span> left_middle(i: <a href="#L8">Interval</a>): <a href="../src/rational_order.taut.html#L9">RationalLt</a>(<a href="#L11">left</a>(i), <a href="#L16">middle</a>(i)) {
+<a class="ln" id="L18" href="#L18">18</a>  <a href="../src/rational_order.taut.html#L87">rational_between_left</a>(<a href="#L11">left</a>(i), <a href="#L12">right</a>(i), <a href="#L13">interval_positive</a>(i))
+<a class="ln" id="L19" href="#L19">19</a>}
+<a class="ln" id="L20" href="#L20">20</a><span class="kw">pub</span> <span class="kw">theorem</span> middle_right(i: <a href="#L8">Interval</a>): <a href="../src/rational_order.taut.html#L9">RationalLt</a>(<a href="#L16">middle</a>(i), <a href="#L12">right</a>(i)) {
+<a class="ln" id="L21" href="#L21">21</a>  <a href="../src/rational_order.taut.html#L120">rational_between_right</a>(<a href="#L11">left</a>(i), <a href="#L12">right</a>(i), <a href="#L13">interval_positive</a>(i))
+<a class="ln" id="L22" href="#L22">22</a>}
+<a class="ln" id="L23" href="#L23">23</a>
+<a class="ln" id="L24" href="#L24">24</a><span class="kw">pub</span> <span class="kw">fn</span> Inside(inner: <a href="#L8">Interval</a>, outer: <a href="#L8">Interval</a>): Prop {
+<a class="ln" id="L25" href="#L25">25</a>  RatLe(<a href="#L11">left</a>(outer), <a href="#L11">left</a>(inner)) ∧ RatLe(<a href="#L12">right</a>(inner), <a href="#L12">right</a>(outer))
+<a class="ln" id="L26" href="#L26">26</a>}
+<a class="ln" id="L27" href="#L27">27</a><span class="kw">pub</span> <span class="kw">theorem</span> inside_left(
+<a class="ln" id="L28" href="#L28">28</a>  inner: <a href="#L8">Interval</a>,
+<a class="ln" id="L29" href="#L29">29</a>  outer: <a href="#L8">Interval</a>,
+<a class="ln" id="L30" href="#L30">30</a>  h: <a href="#L24">Inside</a>(inner, outer)
+<a class="ln" id="L31" href="#L31">31</a>): RatLe(<a href="#L11">left</a>(outer), <a href="#L11">left</a>(inner)) {
+<a class="ln" id="L32" href="#L32">32</a>  ⊢ RatLe(left(outer), left(inner)) <span class="kw">from</span> <span class="kw">match</span> h { AndIntro(a, b) =&gt; a }
+<a class="ln" id="L33" href="#L33">33</a>}
+<a class="ln" id="L34" href="#L34">34</a><span class="kw">pub</span> <span class="kw">theorem</span> inside_right(
+<a class="ln" id="L35" href="#L35">35</a>  inner: <a href="#L8">Interval</a>,
+<a class="ln" id="L36" href="#L36">36</a>  outer: <a href="#L8">Interval</a>,
+<a class="ln" id="L37" href="#L37">37</a>  h: <a href="#L24">Inside</a>(inner, outer)
+<a class="ln" id="L38" href="#L38">38</a>): RatLe(<a href="#L12">right</a>(inner), <a href="#L12">right</a>(outer)) {
+<a class="ln" id="L39" href="#L39">39</a>  ⊢ RatLe(right(inner), right(outer)) <span class="kw">from</span> <span class="kw">match</span> h { AndIntro(a, b) =&gt; b }
+<a class="ln" id="L40" href="#L40">40</a>}
+<a class="ln" id="L41" href="#L41">41</a>
+<a class="ln" id="L42" href="#L42">42</a><span class="kw">pub</span> <span class="kw">theorem</span> chain_left(
+<a class="ln" id="L43" href="#L43">43</a>  boxes: (Nat) -&gt; <a href="#L8">Interval</a>,
+<a class="ln" id="L44" href="#L44">44</a>  nested: (n: Nat) -&gt; <a href="#L24">Inside</a>(boxes(Succ(n)), boxes(n)),
+<a class="ln" id="L45" href="#L45">45</a>  n: Nat
+<a class="ln" id="L46" href="#L46">46</a>): RatLe(<a href="#L11">left</a>(boxes(<span class="num">0</span>)), <a href="#L11">left</a>(boxes(n))) {
+<a class="ln" id="L47" href="#L47">47</a>  <span class="mac">proof!</span>(```
+<a class="ln" id="L48" href="#L48">48</a>    <span class="kw">By</span> induction on n.
+<a class="ln" id="L49" href="#L49">49</a>      [zero] <span class="kw">Case</span> Zero. <span class="kw">By</span> Rat::le_refl.
+<a class="ln" id="L50" href="#L50">50</a>      [succ] <span class="kw">Case</span> Succ(k). <span class="kw">By</span> Rat::le_trans.
+<a class="ln" id="L51" href="#L51">51</a>    %%
+<a class="ln" id="L52" href="#L52">52</a>    [zero] (<span class="fn">left</span>(<span class="fn">boxes</span>(<span class="num">0</span>)))
+<a class="ln" id="L53" href="#L53">53</a>    [succ] (<span class="fn">left</span>(<span class="fn">boxes</span>(<span class="num">0</span>)), <span class="fn">left</span>(<span class="fn">boxes</span>(k)), <span class="fn">left</span>(<span class="fn">boxes</span>(<span class="fn">Succ</span>(k))), ih, <span class="fn">inside_left</span>(<span class="fn">boxes</span>(<span class="fn">Succ</span>(k)), <span class="fn">boxes</span>(k), <span class="fn">nested</span>(k)))
+<a class="ln" id="L54" href="#L54">54</a>  ```)
+<a class="ln" id="L55" href="#L55">55</a>}
+<a class="ln" id="L56" href="#L56">56</a><span class="kw">pub</span> <span class="kw">theorem</span> chain_right(
+<a class="ln" id="L57" href="#L57">57</a>  boxes: (Nat) -&gt; <a href="#L8">Interval</a>,
+<a class="ln" id="L58" href="#L58">58</a>  nested: (n: Nat) -&gt; <a href="#L24">Inside</a>(boxes(Succ(n)), boxes(n)),
+<a class="ln" id="L59" href="#L59">59</a>  n: Nat
+<a class="ln" id="L60" href="#L60">60</a>): RatLe(<a href="#L12">right</a>(boxes(n)), <a href="#L12">right</a>(boxes(<span class="num">0</span>))) {
+<a class="ln" id="L61" href="#L61">61</a>  ⊢ RatLe(right(boxes(n)), right(boxes(<span class="num">0</span>))) <span class="kw">from</span> <span class="kw">match</span> n {
+<a class="ln" id="L62" href="#L62">62</a>    Zero =&gt; Rat::le_refl(right(boxes(<span class="num">0</span>)))
+<a class="ln" id="L63" href="#L63">63</a>    Succ(k) =&gt; Rat::le_trans(
+<a class="ln" id="L64" href="#L64">64</a>      right(boxes(Succ(k))),
+<a class="ln" id="L65" href="#L65">65</a>      right(boxes(k)),
+<a class="ln" id="L66" href="#L66">66</a>      right(boxes(<span class="num">0</span>)),
+<a class="ln" id="L67" href="#L67">67</a>      inside_right(boxes(Succ(k)), boxes(k), nested(k)),
+<a class="ln" id="L68" href="#L68">68</a>      chain_right(boxes, nested, k)
+<a class="ln" id="L69" href="#L69">69</a>    )
+<a class="ln" id="L70" href="#L70">70</a>  }
+<a class="ln" id="L71" href="#L71">71</a>}
+<a class="ln" id="L72" href="#L72">72</a>
+<a class="ln" id="L73" href="#L73">73</a><span class="com">// Every left endpoint is below every right endpoint. Dropping the first</span>
+<a class="ln" id="L74" href="#L74">74</a><span class="com">// interval from both indices avoids arithmetic on indices in this proof.</span>
+<a class="ln" id="L75" href="#L75">75</a><span class="kw">pub</span> <span class="kw">theorem</span> chain_cross(
+<a class="ln" id="L76" href="#L76">76</a>  boxes: (Nat) -&gt; <a href="#L8">Interval</a>,
+<a class="ln" id="L77" href="#L77">77</a>  nested: (n: Nat) -&gt; <a href="#L24">Inside</a>(boxes(Succ(n)), boxes(n)),
+<a class="ln" id="L78" href="#L78">78</a>  n: Nat,
+<a class="ln" id="L79" href="#L79">79</a>  m: Nat
+<a class="ln" id="L80" href="#L80">80</a>): <a href="../src/rational_order.taut.html#L9">RationalLt</a>(<a href="#L11">left</a>(boxes(n)), <a href="#L12">right</a>(boxes(m))) {
+<a class="ln" id="L81" href="#L81">81</a>  ⊢ RationalLt(left(boxes(n)), right(boxes(m))) <span class="kw">from</span> <span class="kw">match</span> n {
+<a class="ln" id="L82" href="#L82">82</a>    Zero =&gt; rational_le_lt(
+<a class="ln" id="L83" href="#L83">83</a>      left(boxes(<span class="num">0</span>)),
+<a class="ln" id="L84" href="#L84">84</a>      left(boxes(m)),
+<a class="ln" id="L85" href="#L85">85</a>      right(boxes(m)),
+<a class="ln" id="L86" href="#L86">86</a>      chain_left(boxes, nested, m),
+<a class="ln" id="L87" href="#L87">87</a>      interval_positive(boxes(m))
+<a class="ln" id="L88" href="#L88">88</a>    )
+<a class="ln" id="L89" href="#L89">89</a>    Succ(k) =&gt; ⊢ RationalLt(left(boxes(Succ(k))), right(boxes(m))) <span class="kw">from</span> <span class="kw">match</span> m {
+<a class="ln" id="L90" href="#L90">90</a>      Zero =&gt; rational_lt_le_trans(
+<a class="ln" id="L91" href="#L91">91</a>        left(boxes(Succ(k))),
+<a class="ln" id="L92" href="#L92">92</a>        right(boxes(Succ(k))),
+<a class="ln" id="L93" href="#L93">93</a>        right(boxes(<span class="num">0</span>)),
+<a class="ln" id="L94" href="#L94">94</a>        interval_positive(boxes(Succ(k))),
+<a class="ln" id="L95" href="#L95">95</a>        chain_right(boxes, nested, Succ(k))
+<a class="ln" id="L96" href="#L96">96</a>      )
+<a class="ln" id="L97" href="#L97">97</a>      Succ(j) =&gt; chain_cross((i: Nat) =&gt; boxes(Succ(i)), (i: Nat) =&gt; nested(Succ(i)), k, j)
+<a class="ln" id="L98" href="#L98">98</a>    }
+<a class="ln" id="L99" href="#L99">99</a>  }
+<a class="ln" id="L100" href="#L100">100</a>}
+</code></pre>
+</html>

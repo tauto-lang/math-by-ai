@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/factor_search.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/factor_search.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::Base
+<a class="ln" id="L2" href="#L2">2</a><span class="kw">import</span> std::Nat
+<a class="ln" id="L3" href="#L3">3</a><span class="kw">import</span> std::NatDiv
+<a class="ln" id="L4" href="#L4">4</a><span class="kw">import</span> std::NatNorm
+<a class="ln" id="L5" href="#L5">5</a><span class="kw">import</span> std::IntLaws
+<a class="ln" id="L6" href="#L6">6</a><span class="kw">import</span> <span class="str">&quot;notation.taut&quot;</span>
+<a class="ln" id="L7" href="#L7">7</a><span class="kw">import</span> <span class="str">&quot;divisibility.taut&quot;</span>
+<a class="ln" id="L8" href="#L8">8</a><span class="kw">import</span> <span class="str">&quot;primality.taut&quot;</span>
+<a class="ln" id="L9" href="#L9">9</a>
+<a class="ln" id="L10" href="#L10">10</a><span class="com">// Quotient projection used only after a nonzero factor has been established.</span>
+<a class="ln" id="L11" href="#L11">11</a><span class="kw">pub</span> <span class="kw">fn</span> quotient(n: Nat, d: Nat): Nat { Nat::dm_fst(Nat::divmod(n, d, <span class="num">0</span>, <span class="num">0</span>)) }
+<a class="ln" id="L12" href="#L12">12</a><span class="kw">pub(open)</span> <span class="kw">inductive</span> FactorWitness(n: Nat, d: Nat): Prop {
+<a class="ln" id="L13" href="#L13">13</a>  Witness(
+<a class="ln" id="L14" href="#L14">14</a>    positive: <span class="mac">nat!</span>(`<span class="num">1</span> &lt; d`),
+<a class="ln" id="L15" href="#L15">15</a>    proper: Nat::eq(d, n) = <span class="kw">false</span>,
+<a class="ln" id="L16" href="#L16">16</a>    product: <span class="mac">nat!</span>(`d * <span class="fn">quotient</span>(n, d) = n`)
+<a class="ln" id="L17" href="#L17">17</a>  ): <a href="#L12">FactorWitness</a>(n, d)
+<a class="ln" id="L18" href="#L18">18</a>}
+<a class="ln" id="L19" href="#L19">19</a><span class="kw">pub</span> <span class="kw">theorem</span> factor_product(n: Nat, d: Nat, h: <a href="#L12">FactorWitness</a>(n, d)): <span class="mac">nat!</span>(`d * <span class="fn">quotient</span>(n, d) = n`) {
+<a class="ln" id="L20" href="#L20">20</a>  ⊢ <span class="mac">nat!</span>(`d * <span class="fn">quotient</span>(n, d) = n`) <span class="kw">from</span> <span class="kw">match</span> h { Witness(pos, ne, eq) =&gt; eq }
+<a class="ln" id="L21" href="#L21">21</a>}
+<a class="ln" id="L22" href="#L22">22</a><span class="kw">pub</span> <span class="kw">theorem</span> factor_positive(n: Nat, d: Nat, h: <a href="#L12">FactorWitness</a>(n, d)): <span class="mac">nat!</span>(`<span class="num">1</span> &lt; d`) {
+<a class="ln" id="L23" href="#L23">23</a>  ⊢ <span class="mac">nat!</span>(`<span class="num">1</span> &lt; d`) <span class="kw">from</span> <span class="kw">match</span> h { Witness(pos, ne, eq) =&gt; pos }
+<a class="ln" id="L24" href="#L24">24</a>}
+<a class="ln" id="L25" href="#L25">25</a><span class="kw">pub</span> <span class="kw">theorem</span> factor_proper(n: Nat, d: Nat, h: <a href="#L12">FactorWitness</a>(n, d)): Nat::eq(d, n) = <span class="kw">false</span> {
+<a class="ln" id="L26" href="#L26">26</a>  ⊢ Nat::eq(d, n) = <span class="kw">false</span> <span class="kw">from</span> <span class="kw">match</span> h { Witness(pos, ne, eq) =&gt; ne }
+<a class="ln" id="L27" href="#L27">27</a>}
+<a class="ln" id="L28" href="#L28">28</a><span class="kw">theorem</span> test_equal(
+<a class="ln" id="L29" href="#L29">29</a>  n: Nat,
+<a class="ln" id="L30" href="#L30">30</a>  k: Nat,
+<a class="ln" id="L31" href="#L31">31</a>  eq: Nat::eq(Succ(Succ(k)), n) = <span class="kw">true</span>
+<a class="ln" id="L32" href="#L32">32</a>): <a href="../src/primality.taut.html#L27">divisor_test</a>(n, Succ(Succ(k))) = <span class="kw">true</span> {
+<a class="ln" id="L33" href="#L33">33</a>  Eq::congr(
+<a class="ln" id="L34" href="#L34">34</a>    (b: Bool) =&gt; Bool::or(
+<a class="ln" id="L35" href="#L35">35</a>      b,
+<a class="ln" id="L36" href="#L36">36</a>      <a href="../src/primality.taut.html#L26">bool_neg</a>(Nat::eq(Nat::rem_nz(n, Succ(Succ(k)), Nat::succ_ne_zero(Succ(k))), <span class="num">0</span>))
+<a class="ln" id="L37" href="#L37">37</a>    ),
+<a class="ln" id="L38" href="#L38">38</a>    eq
+<a class="ln" id="L39" href="#L39">39</a>  )
+<a class="ln" id="L40" href="#L40">40</a>}
+<a class="ln" id="L41" href="#L41">41</a><span class="kw">theorem</span> test_nonzero(
+<a class="ln" id="L42" href="#L42">42</a>  n: Nat,
+<a class="ln" id="L43" href="#L43">43</a>  k: Nat,
+<a class="ln" id="L44" href="#L44">44</a>  eq: Nat::eq(Succ(Succ(k)), n) = <span class="kw">false</span>,
+<a class="ln" id="L45" href="#L45">45</a>  rem: Nat::eq(Nat::rem_nz(n, Succ(Succ(k)), Nat::succ_ne_zero(Succ(k))), <span class="num">0</span>) = <span class="kw">false</span>
+<a class="ln" id="L46" href="#L46">46</a>): <a href="../src/primality.taut.html#L27">divisor_test</a>(n, Succ(Succ(k))) = <span class="kw">true</span> {
+<a class="ln" id="L47" href="#L47">47</a>  Eq::trans(
+<a class="ln" id="L48" href="#L48">48</a>    Eq::congr(
+<a class="ln" id="L49" href="#L49">49</a>      (b: Bool) =&gt; Bool::or(
+<a class="ln" id="L50" href="#L50">50</a>        b,
+<a class="ln" id="L51" href="#L51">51</a>        <a href="../src/primality.taut.html#L26">bool_neg</a>(Nat::eq(Nat::rem_nz(n, Succ(Succ(k)), Nat::succ_ne_zero(Succ(k))), <span class="num">0</span>))
+<a class="ln" id="L52" href="#L52">52</a>      ),
+<a class="ln" id="L53" href="#L53">53</a>      eq
+<a class="ln" id="L54" href="#L54">54</a>    ),
+<a class="ln" id="L55" href="#L55">55</a>    Eq::congr(<a href="../src/primality.taut.html#L26">bool_neg</a>, rem)
+<a class="ln" id="L56" href="#L56">56</a>  )
+<a class="ln" id="L57" href="#L57">57</a>}
+<a class="ln" id="L58" href="#L58">58</a><span class="kw">pub</span> <span class="kw">theorem</span> bad_test_factor(n: Nat, d: Nat, bad: <a href="../src/primality.taut.html#L27">divisor_test</a>(n, d) = <span class="kw">false</span>): <a href="#L12">FactorWitness</a>(n, d) {
+<a class="ln" id="L59" href="#L59">59</a>  ⊢ FactorWitness(n, d) <span class="kw">from</span> <span class="kw">match</span> d {
+<a class="ln" id="L60" href="#L60">60</a>    Zero =&gt; False::elim(true_ne_false(bad))
+<a class="ln" id="L61" href="#L61">61</a>    Succ(k) =&gt; ⊢ FactorWitness(n, Succ(k)) <span class="kw">from</span> <span class="kw">match</span> k {
+<a class="ln" id="L62" href="#L62">62</a>      Zero =&gt; False::elim(true_ne_false(bad))
+<a class="ln" id="L63" href="#L63">63</a>      Succ(j) =&gt; Or::elim(
+<a class="ln" id="L64" href="#L64">64</a>        boolean_cases(Nat::eq(Succ(Succ(j)), n)),
+<a class="ln" id="L65" href="#L65">65</a>        (ne: Nat::eq(Succ(Succ(j)), n) = <span class="kw">false</span>) =&gt; Or::elim(
+<a class="ln" id="L66" href="#L66">66</a>          boolean_cases(Nat::eq(Nat::rem_nz(n, Succ(Succ(j)), Nat::succ_ne_zero(Succ(j))), <span class="num">0</span>)),
+<a class="ln" id="L67" href="#L67">67</a>          (nonzero: Nat::eq(Nat::rem_nz(n, Succ(Succ(j)), Nat::succ_ne_zero(Succ(j))), <span class="num">0</span>) = <span class="kw">false</span>) =&gt; False::elim(
+<a class="ln" id="L68" href="#L68">68</a>            true_ne_false(Eq::trans(Eq::sym(test_nonzero(n, j, ne, nonzero)), bad))
+<a class="ln" id="L69" href="#L69">69</a>          ),
+<a class="ln" id="L70" href="#L70">70</a>          (zero: Nat::eq(Nat::rem_nz(n, Succ(Succ(j)), Nat::succ_ne_zero(Succ(j))), <span class="num">0</span>) = <span class="kw">true</span>) =&gt; Witness(
+<a class="ln" id="L71" href="#L71">71</a>            Refl,
+<a class="ln" id="L72" href="#L72">72</a>            ne,
+<a class="ln" id="L73" href="#L73">73</a>            Eq::sym(Nat::mul_div_of_mod_zero(n, Succ(Succ(j)), Nat::succ_ne_zero(Succ(j)), zero))
+<a class="ln" id="L74" href="#L74">74</a>          )
+<a class="ln" id="L75" href="#L75">75</a>        ),
+<a class="ln" id="L76" href="#L76">76</a>        (eq: Nat::eq(Succ(Succ(j)), n) = <span class="kw">true</span>) =&gt; False::elim(
+<a class="ln" id="L77" href="#L77">77</a>          true_ne_false(Eq::trans(Eq::sym(test_equal(n, j, eq)), bad))
+<a class="ln" id="L78" href="#L78">78</a>        )
+<a class="ln" id="L79" href="#L79">79</a>      )
+<a class="ln" id="L80" href="#L80">80</a>    }
+<a class="ln" id="L81" href="#L81">81</a>  }
+<a class="ln" id="L82" href="#L82">82</a>}
+<a class="ln" id="L83" href="#L83">83</a><span class="kw">theorem</span> trial_false(n: Nat, pos: <span class="mac">nat!</span>(`<span class="num">1</span> &lt; n`), bad: <a href="../src/primality.taut.html#L45">is_prime</a>(n) = <span class="kw">false</span>): <a href="../src/primality.taut.html#L39">trial</a>(n, n) = <span class="kw">false</span> {
+<a class="ln" id="L84" href="#L84">84</a>  Eq::trans(Eq::sym(Eq::congr((b: Bool) =&gt; Bool::and(b, <a href="../src/primality.taut.html#L39">trial</a>(n, n)), pos)), bad)
+<a class="ln" id="L85" href="#L85">85</a>}
+<a class="ln" id="L86" href="#L86">86</a><span class="kw">pub</span> <span class="kw">theorem</span> searched_factor(
+<a class="ln" id="L87" href="#L87">87</a>  n: Nat,
+<a class="ln" id="L88" href="#L88">88</a>  pos: <span class="mac">nat!</span>(`<span class="num">1</span> &lt; n`),
+<a class="ln" id="L89" href="#L89">89</a>  bad: <a href="../src/primality.taut.html#L45">is_prime</a>(n) = <span class="kw">false</span>
+<a class="ln" id="L90" href="#L90">90</a>): <a href="#L12">FactorWitness</a>(n, <a href="../src/primality.taut.html#L151">find_factor</a>(n, n)) {
+<a class="ln" id="L91" href="#L91">91</a>  <a href="#L58">bad_test_factor</a>(
+<a class="ln" id="L92" href="#L92">92</a>    n,
+<a class="ln" id="L93" href="#L93">93</a>    <a href="../src/primality.taut.html#L151">find_factor</a>(n, n),
+<a class="ln" id="L94" href="#L94">94</a>    <a href="../src/primality.taut.html#L160">candidate_bad</a>(n, n, <a href="../src/primality.taut.html#L151">find_factor</a>(n, n), <a href="../src/primality.taut.html#L201">find_factor_correct</a>(n, n, <a href="#L83">trial_false</a>(n, pos, bad)))
+<a class="ln" id="L95" href="#L95">95</a>  )
+<a class="ln" id="L96" href="#L96">96</a>}
+<a class="ln" id="L97" href="#L97">97</a>
+<a class="ln" id="L98" href="#L98">98</a><span class="kw">theorem</span> quotient_positive_of(
+<a class="ln" id="L99" href="#L99">99</a>  n: Nat,
+<a class="ln" id="L100" href="#L100">100</a>  d: Nat,
+<a class="ln" id="L101" href="#L101">101</a>  q: Nat,
+<a class="ln" id="L102" href="#L102">102</a>  pos: <span class="mac">nat!</span>(`<span class="num">1</span> &lt; n`),
+<a class="ln" id="L103" href="#L103">103</a>  product: <span class="mac">nat!</span>(`d * q = n`),
+<a class="ln" id="L104" href="#L104">104</a>  proper: Nat::eq(d, n) = <span class="kw">false</span>
+<a class="ln" id="L105" href="#L105">105</a>): <span class="mac">nat!</span>(`<span class="num">1</span> &lt; q`) {
+<a class="ln" id="L106" href="#L106">106</a>  ⊢ <span class="mac">nat!</span>(`<span class="num">1</span> &lt; q`) <span class="kw">from</span> <span class="kw">match</span> q {
+<a class="ln" id="L107" href="#L107">107</a>    Zero =&gt; False::elim(
+<a class="ln" id="L108" href="#L108">108</a>      false_ne_true(
+<a class="ln" id="L109" href="#L109">109</a>        Eq::trans(
+<a class="ln" id="L110" href="#L110">110</a>          Eq::congr((x: Nat) =&gt; Nat::lt(<span class="num">1</span>, x), Eq::trans(Eq::sym(Nat::mul_zero_right(d)), product)),
+<a class="ln" id="L111" href="#L111">111</a>          pos
+<a class="ln" id="L112" href="#L112">112</a>        )
+<a class="ln" id="L113" href="#L113">113</a>      )
+<a class="ln" id="L114" href="#L114">114</a>    )
+<a class="ln" id="L115" href="#L115">115</a>    Succ(k) =&gt; ⊢ <span class="mac">nat!</span>(`<span class="num">1</span> &lt; <span class="fn">Succ</span>(k)`) <span class="kw">from</span> <span class="kw">match</span> k {
+<a class="ln" id="L116" href="#L116">116</a>      Zero =&gt; False::elim(
+<a class="ln" id="L117" href="#L117">117</a>        true_ne_false(
+<a class="ln" id="L118" href="#L118">118</a>          Eq::trans(
+<a class="ln" id="L119" href="#L119">119</a>            Eq::sym(Nat::eq_refl(d)),
+<a class="ln" id="L120" href="#L120">120</a>            Eq::trans(
+<a class="ln" id="L121" href="#L121">121</a>              Eq::sym(
+<a class="ln" id="L122" href="#L122">122</a>                Eq::congr(
+<a class="ln" id="L123" href="#L123">123</a>                  (x: Nat) =&gt; Nat::eq(d, x),
+<a class="ln" id="L124" href="#L124">124</a>                  Eq::trans(Eq::sym(product), Nat::mul_one_right(d))
+<a class="ln" id="L125" href="#L125">125</a>                )
+<a class="ln" id="L126" href="#L126">126</a>              ),
+<a class="ln" id="L127" href="#L127">127</a>              proper
+<a class="ln" id="L128" href="#L128">128</a>            )
+<a class="ln" id="L129" href="#L129">129</a>          )
+<a class="ln" id="L130" href="#L130">130</a>        )
+<a class="ln" id="L131" href="#L131">131</a>      )
+<a class="ln" id="L132" href="#L132">132</a>      Succ(j) =&gt; Refl
+<a class="ln" id="L133" href="#L133">133</a>    }
+<a class="ln" id="L134" href="#L134">134</a>  }
+<a class="ln" id="L135" href="#L135">135</a>}
+<a class="ln" id="L136" href="#L136">136</a><span class="kw">pub</span> <span class="kw">theorem</span> factor_quotient_positive(
+<a class="ln" id="L137" href="#L137">137</a>  n: Nat,
+<a class="ln" id="L138" href="#L138">138</a>  d: Nat,
+<a class="ln" id="L139" href="#L139">139</a>  pos: <span class="mac">nat!</span>(`<span class="num">1</span> &lt; n`),
+<a class="ln" id="L140" href="#L140">140</a>  h: <a href="#L12">FactorWitness</a>(n, d)
+<a class="ln" id="L141" href="#L141">141</a>): <span class="mac">nat!</span>(`<span class="num">1</span> &lt; <span class="fn">quotient</span>(n, d)`) {
+<a class="ln" id="L142" href="#L142">142</a>  <a href="#L98">quotient_positive_of</a>(n, d, <a href="#L11">quotient</a>(n, d), pos, <a href="#L19">factor_product</a>(n, d, h), <a href="#L25">factor_proper</a>(n, d, h))
+<a class="ln" id="L143" href="#L143">143</a>}
+<a class="ln" id="L144" href="#L144">144</a><span class="kw">theorem</span> add_positive(a: Nat, b: Nat, h: <span class="mac">nat!</span>(`<span class="num">0</span> &lt; b`)): <span class="mac">nat!</span>(`a &lt; a + b`) {
+<a class="ln" id="L145" href="#L145">145</a>  ⊢ <span class="mac">nat!</span>(`a &lt; a + b`) <span class="kw">from</span> <span class="kw">match</span> a {
+<a class="ln" id="L146" href="#L146">146</a>    Zero =&gt; Eq::trans(Eq::congr((x: Nat) =&gt; Nat::lt(<span class="num">0</span>, x), Nat::add_zero_left(b)), h)
+<a class="ln" id="L147" href="#L147">147</a>    Succ(k) =&gt; Eq::trans(
+<a class="ln" id="L148" href="#L148">148</a>      Eq::congr((x: Nat) =&gt; Nat::lt(Succ(k), x), Nat::add_succ_left(k, b)),
+<a class="ln" id="L149" href="#L149">149</a>      add_positive(k, b, h)
+<a class="ln" id="L150" href="#L150">150</a>    )
+<a class="ln" id="L151" href="#L151">151</a>  }
+<a class="ln" id="L152" href="#L152">152</a>}
+<a class="ln" id="L153" href="#L153">153</a><span class="kw">theorem</span> mul_positive(a: Nat, b: Nat): <span class="mac">nat!</span>(`<span class="num">0</span> &lt; <span class="fn">Succ</span>(a) * <span class="fn">Succ</span>(b)`) {
+<a class="ln" id="L154" href="#L154">154</a>  Eq::congr((x: Nat) =&gt; Nat::lt(<span class="num">0</span>, x), Nat::mul_succ_left(a, Succ(b)))
+<a class="ln" id="L155" href="#L155">155</a>}
+<a class="ln" id="L156" href="#L156">156</a><span class="kw">theorem</span> pair_smaller(a: Nat, b: Nat): <span class="mac">nat!</span>(`<span class="fn">Succ</span>(a) &lt; <span class="fn">Succ</span>(a) * <span class="fn">Succ</span>(<span class="fn">Succ</span>(b))`) {
+<a class="ln" id="L157" href="#L157">157</a>  Eq::trans(
+<a class="ln" id="L158" href="#L158">158</a>    Eq::congr((x: Nat) =&gt; Nat::lt(Succ(a), x), Nat::mul_succ_right(Succ(a), Succ(b))),
+<a class="ln" id="L159" href="#L159">159</a>    Eq::trans(
+<a class="ln" id="L160" href="#L160">160</a>      Eq::congr((x: Nat) =&gt; Nat::lt(Succ(a), x), Nat::add_comm(<span class="mac">nat!</span>(`<span class="fn">Succ</span>(a) * <span class="fn">Succ</span>(b)`), Succ(a))),
+<a class="ln" id="L161" href="#L161">161</a>      <a href="#L144">add_positive</a>(Succ(a), <span class="mac">nat!</span>(`<span class="fn">Succ</span>(a) * <span class="fn">Succ</span>(b)`), <a href="#L153">mul_positive</a>(a, b))
+<a class="ln" id="L162" href="#L162">162</a>    )
+<a class="ln" id="L163" href="#L163">163</a>  )
+<a class="ln" id="L164" href="#L164">164</a>}
+<a class="ln" id="L165" href="#L165">165</a><span class="kw">theorem</span> quotient_smaller_of(
+<a class="ln" id="L166" href="#L166">166</a>  n: Nat,
+<a class="ln" id="L167" href="#L167">167</a>  d: Nat,
+<a class="ln" id="L168" href="#L168">168</a>  q: Nat,
+<a class="ln" id="L169" href="#L169">169</a>  hd: <span class="mac">nat!</span>(`<span class="num">1</span> &lt; d`),
+<a class="ln" id="L170" href="#L170">170</a>  hq: <span class="mac">nat!</span>(`<span class="num">1</span> &lt; q`),
+<a class="ln" id="L171" href="#L171">171</a>  product: <span class="mac">nat!</span>(`d * q = n`)
+<a class="ln" id="L172" href="#L172">172</a>): <span class="mac">nat!</span>(`q &lt; n`) {
+<a class="ln" id="L173" href="#L173">173</a>  ⊢ <span class="mac">nat!</span>(`q &lt; n`) <span class="kw">from</span> <span class="kw">match</span> d {
+<a class="ln" id="L174" href="#L174">174</a>    Zero =&gt; False::elim(false_ne_true(hd))
+<a class="ln" id="L175" href="#L175">175</a>    Succ(k) =&gt; ⊢ <span class="mac">nat!</span>(`q &lt; n`) <span class="kw">from</span> <span class="kw">match</span> k {
+<a class="ln" id="L176" href="#L176">176</a>      Zero =&gt; False::elim(false_ne_true(hd))
+<a class="ln" id="L177" href="#L177">177</a>      Succ(j) =&gt; ⊢ <span class="mac">nat!</span>(`q &lt; n`) <span class="kw">from</span> <span class="kw">match</span> q {
+<a class="ln" id="L178" href="#L178">178</a>        Zero =&gt; False::elim(false_ne_true(hq))
+<a class="ln" id="L179" href="#L179">179</a>        Succ(i) =&gt; Eq::subst(
+<a class="ln" id="L180" href="#L180">180</a>          (x: Nat) =&gt; <span class="mac">nat!</span>(`<span class="fn">Succ</span>(i) &lt; x`),
+<a class="ln" id="L181" href="#L181">181</a>          product,
+<a class="ln" id="L182" href="#L182">182</a>          Eq::subst(
+<a class="ln" id="L183" href="#L183">183</a>            (x: Nat) =&gt; <span class="mac">nat!</span>(`<span class="fn">Succ</span>(i) &lt; x`),
+<a class="ln" id="L184" href="#L184">184</a>            Nat::mul_comm(Succ(i), Succ(Succ(j))),
+<a class="ln" id="L185" href="#L185">185</a>            pair_smaller(i, j)
+<a class="ln" id="L186" href="#L186">186</a>          )
+<a class="ln" id="L187" href="#L187">187</a>        )
+<a class="ln" id="L188" href="#L188">188</a>      }
+<a class="ln" id="L189" href="#L189">189</a>    }
+<a class="ln" id="L190" href="#L190">190</a>  }
+<a class="ln" id="L191" href="#L191">191</a>}
+<a class="ln" id="L192" href="#L192">192</a><span class="kw">pub</span> <span class="kw">theorem</span> factor_quotient_smaller(
+<a class="ln" id="L193" href="#L193">193</a>  n: Nat,
+<a class="ln" id="L194" href="#L194">194</a>  d: Nat,
+<a class="ln" id="L195" href="#L195">195</a>  pos: <span class="mac">nat!</span>(`<span class="num">1</span> &lt; n`),
+<a class="ln" id="L196" href="#L196">196</a>  h: <a href="#L12">FactorWitness</a>(n, d)
+<a class="ln" id="L197" href="#L197">197</a>): <span class="mac">nat!</span>(`<span class="fn">quotient</span>(n, d) &lt; n`) {
+<a class="ln" id="L198" href="#L198">198</a>  <a href="#L165">quotient_smaller_of</a>(
+<a class="ln" id="L199" href="#L199">199</a>    n,
+<a class="ln" id="L200" href="#L200">200</a>    d,
+<a class="ln" id="L201" href="#L201">201</a>    <a href="#L11">quotient</a>(n, d),
+<a class="ln" id="L202" href="#L202">202</a>    <a href="#L22">factor_positive</a>(n, d, h),
+<a class="ln" id="L203" href="#L203">203</a>    <a href="#L136">factor_quotient_positive</a>(n, d, pos, h),
+<a class="ln" id="L204" href="#L204">204</a>    <a href="#L19">factor_product</a>(n, d, h)
+<a class="ln" id="L205" href="#L205">205</a>  )
+<a class="ln" id="L206" href="#L206">206</a>}
+<a class="ln" id="L207" href="#L207">207</a><span class="kw">pub</span> <span class="kw">theorem</span> searched_smaller(
+<a class="ln" id="L208" href="#L208">208</a>  n: Nat,
+<a class="ln" id="L209" href="#L209">209</a>  pos: <span class="mac">nat!</span>(`<span class="num">1</span> &lt; n`),
+<a class="ln" id="L210" href="#L210">210</a>  bad: <a href="../src/primality.taut.html#L45">is_prime</a>(n) = <span class="kw">false</span>
+<a class="ln" id="L211" href="#L211">211</a>): <span class="mac">nat!</span>(`<span class="fn">find_factor</span>(n, n) &lt; n`) {
+<a class="ln" id="L212" href="#L212">212</a>  Nat::lt_succ_ne(
+<a class="ln" id="L213" href="#L213">213</a>    <a href="../src/primality.taut.html#L151">find_factor</a>(n, n),
+<a class="ln" id="L214" href="#L214">214</a>    n,
+<a class="ln" id="L215" href="#L215">215</a>    <a href="../src/primality.taut.html#L168">candidate_bound</a>(n, n, <a href="../src/primality.taut.html#L151">find_factor</a>(n, n), <a href="../src/primality.taut.html#L201">find_factor_correct</a>(n, n, <a href="#L83">trial_false</a>(n, pos, bad))),
+<a class="ln" id="L216" href="#L216">216</a>    <a href="#L25">factor_proper</a>(n, <a href="../src/primality.taut.html#L151">find_factor</a>(n, n), <a href="#L86">searched_factor</a>(n, pos, bad))
+<a class="ln" id="L217" href="#L217">217</a>  )
+<a class="ln" id="L218" href="#L218">218</a>}
+</code></pre>
+</html>

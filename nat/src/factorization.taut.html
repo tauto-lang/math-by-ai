@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/factorization.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/factorization.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::Calc { calc }
+<a class="ln" id="L2" href="#L2">2</a><span class="kw">import</span> std::Base
+<a class="ln" id="L3" href="#L3">3</a><span class="kw">import</span> std::Nat
+<a class="ln" id="L4" href="#L4">4</a><span class="kw">import</span> std::NatDiv
+<a class="ln" id="L5" href="#L5">5</a><span class="kw">import</span> <span class="str">&quot;notation.taut&quot;</span>
+<a class="ln" id="L6" href="#L6">6</a><span class="kw">import</span> algebra::monoid
+<a class="ln" id="L7" href="#L7">7</a><span class="kw">import</span> <span class="str">&quot;arithmetic.taut&quot;</span>
+<a class="ln" id="L8" href="#L8">8</a><span class="kw">import</span> <span class="str">&quot;primes.taut&quot;</span>
+<a class="ln" id="L9" href="#L9">9</a><span class="kw">import</span> <span class="str">&quot;primality.taut&quot;</span>
+<a class="ln" id="L10" href="#L10">10</a><span class="kw">import</span> <span class="str">&quot;factor_search.taut&quot;</span>
+<a class="ln" id="L11" href="#L11">11</a>
+<a class="ln" id="L12" href="#L12">12</a><span class="kw">pub(open)</span> <span class="kw">inductive</span> AllPrime: (List(Nat)) -&gt; Prop {
+<a class="ln" id="L13" href="#L13">13</a>  PrimesNil: <a href="#L12">AllPrime</a>(Nil)
+<a class="ln" id="L14" href="#L14">14</a>  PrimesCons(p: Nat, xs: List(Nat), hp: <a href="../src/primes.taut.html#L10">Prime</a>(p), tail: <a href="#L12">AllPrime</a>(xs)): <a href="#L12">AllPrime</a>(Cons(p, xs))
+<a class="ln" id="L15" href="#L15">15</a>}
+<a class="ln" id="L16" href="#L16">16</a><span class="kw">pub(open)</span> <span class="kw">inductive</span> Factorization(n: Nat, xs: List(Nat)): Prop {
+<a class="ln" id="L17" href="#L17">17</a>  Factored(primes: <a href="#L12">AllPrime</a>(xs), product: <span class="mac">nat!</span>(`<span class="fn">prod</span>(xs) = n`)): <a href="#L16">Factorization</a>(n, xs)
+<a class="ln" id="L18" href="#L18">18</a>}
+<a class="ln" id="L19" href="#L19">19</a><span class="kw">pub</span> <span class="kw">theorem</span> factorization_primes(n: Nat, xs: List(Nat), h: <a href="#L16">Factorization</a>(n, xs)): <a href="#L12">AllPrime</a>(xs) {
+<a class="ln" id="L20" href="#L20">20</a>  ⊢ AllPrime(xs) <span class="kw">from</span> <span class="kw">match</span> h { Factored(ps, product) =&gt; ps }
+<a class="ln" id="L21" href="#L21">21</a>}
+<a class="ln" id="L22" href="#L22">22</a><span class="kw">pub</span> <span class="kw">theorem</span> factorization_product(
+<a class="ln" id="L23" href="#L23">23</a>  n: Nat,
+<a class="ln" id="L24" href="#L24">24</a>  xs: List(Nat),
+<a class="ln" id="L25" href="#L25">25</a>  h: <a href="#L16">Factorization</a>(n, xs)
+<a class="ln" id="L26" href="#L26">26</a>): <span class="mac">nat!</span>(`<span class="fn">prod</span>(xs) = n`) {
+<a class="ln" id="L27" href="#L27">27</a>  ⊢ <span class="mac">nat!</span>(`<span class="fn">prod</span>(xs) = n`) <span class="kw">from</span> <span class="kw">match</span> h { Factored(ps, product) =&gt; product }
+<a class="ln" id="L28" href="#L28">28</a>}
+<a class="ln" id="L29" href="#L29">29</a><span class="kw">pub</span> <span class="kw">theorem</span> primes_append(
+<a class="ln" id="L30" href="#L30">30</a>  xs: List(Nat),
+<a class="ln" id="L31" href="#L31">31</a>  ys: List(Nat),
+<a class="ln" id="L32" href="#L32">32</a>  hx: <a href="#L12">AllPrime</a>(xs),
+<a class="ln" id="L33" href="#L33">33</a>  hy: <a href="#L12">AllPrime</a>(ys)
+<a class="ln" id="L34" href="#L34">34</a>): <a href="#L12">AllPrime</a>(List::append(xs, ys)) {
+<a class="ln" id="L35" href="#L35">35</a>  ⊢ AllPrime(List::append(xs, ys)) <span class="kw">from</span> <span class="kw">match</span> hx {
+<a class="ln" id="L36" href="#L36">36</a>    PrimesNil =&gt; hy
+<a class="ln" id="L37" href="#L37">37</a>    PrimesCons(p, rest, hp, hr) =&gt; PrimesCons(
+<a class="ln" id="L38" href="#L38">38</a>      p,
+<a class="ln" id="L39" href="#L39">39</a>      List::append(rest, ys),
+<a class="ln" id="L40" href="#L40">40</a>      hp,
+<a class="ln" id="L41" href="#L41">41</a>      primes_append(rest, ys, hr, hy)
+<a class="ln" id="L42" href="#L42">42</a>    )
+<a class="ln" id="L43" href="#L43">43</a>  }
+<a class="ln" id="L44" href="#L44">44</a>}
+<a class="ln" id="L45" href="#L45">45</a><span class="kw">pub</span> <span class="kw">theorem</span> factorization_append(
+<a class="ln" id="L46" href="#L46">46</a>  a: Nat,
+<a class="ln" id="L47" href="#L47">47</a>  b: Nat,
+<a class="ln" id="L48" href="#L48">48</a>  xs: List(Nat),
+<a class="ln" id="L49" href="#L49">49</a>  ys: List(Nat),
+<a class="ln" id="L50" href="#L50">50</a>  hx: <a href="#L16">Factorization</a>(a, xs),
+<a class="ln" id="L51" href="#L51">51</a>  hy: <a href="#L16">Factorization</a>(b, ys)
+<a class="ln" id="L52" href="#L52">52</a>): <a href="#L16">Factorization</a>(<span class="mac">nat!</span>(`a * b`), List::append(xs, ys)) {
+<a class="ln" id="L53" href="#L53">53</a>  <a href="#L17">Factored</a>(
+<a class="ln" id="L54" href="#L54">54</a>    <a href="#L29">primes_append</a>(xs, ys, <a href="#L19">factorization_primes</a>(a, xs, hx), <a href="#L19">factorization_primes</a>(b, ys, hy)),
+<a class="ln" id="L55" href="#L55">55</a>    <span class="mac">calc!</span>(```
+<a class="ln" id="L56" href="#L56">56</a>      $nat!(`<span class="str">prod(List::append(xs, ys))</span>`)
+<a class="ln" id="L57" href="#L57">57</a>      = $nat!(`<span class="str">prod(xs) * prod(ys)</span>`) <span class="kw">from</span> $<span class="fn">prod_append</span>(<span class="var">xs</span>, <span class="var">ys</span>)
+<a class="ln" id="L58" href="#L58">58</a>      = $nat!(`<span class="str">a * prod(ys)</span>`) <span class="kw">from</span> $<span class="ty">Eq::congr</span>(
+<a class="ln" id="L59" href="#L59">59</a>        (<span class="var">x</span>: <span class="ty">Nat</span>) =&gt; nat!(`<span class="str">x * prod(ys)</span>`),
+<a class="ln" id="L60" href="#L60">60</a>        <span class="fn">factorization_product</span>(<span class="var">a</span>, <span class="var">xs</span>, <span class="var">hx</span>)
+<a class="ln" id="L61" href="#L61">61</a>      )
+<a class="ln" id="L62" href="#L62">62</a>      = $nat!(`<span class="str">a * b</span>`) <span class="kw">from</span> $<span class="ty">Eq::congr</span>((<span class="var">y</span>: <span class="ty">Nat</span>) =&gt; nat!(`<span class="str">a * y</span>`), <span class="fn">factorization_product</span>(<span class="var">b</span>, <span class="var">ys</span>, <span class="var">hy</span>))
+<a class="ln" id="L63" href="#L63">63</a>      ```)
+<a class="ln" id="L64" href="#L64">64</a>  )
+<a class="ln" id="L65" href="#L65">65</a>}
+<a class="ln" id="L66" href="#L66">66</a>
+<a class="ln" id="L67" href="#L67">67</a><span class="kw">fn</span> factor_loop(steps: Nat, n: Nat): List(Nat) <span class="kw">decreasing_by</span> steps {
+<a class="ln" id="L68" href="#L68">68</a>  ⊢ List(Nat) <span class="kw">from</span> <span class="kw">match</span> n {
+<a class="ln" id="L69" href="#L69">69</a>    Zero =&gt; Nil
+<a class="ln" id="L70" href="#L70">70</a>    Succ(k) =&gt; ⊢ List(Nat) <span class="kw">from</span> <span class="kw">match</span> k {
+<a class="ln" id="L71" href="#L71">71</a>      Zero =&gt; Nil
+<a class="ln" id="L72" href="#L72">72</a>      Succ(j) =&gt; ⊢ List(Nat) <span class="kw">from</span> <span class="kw">match</span> steps {
+<a class="ln" id="L73" href="#L73">73</a>        Zero =&gt; Nil
+<a class="ln" id="L74" href="#L74">74</a>        Succ(f) =&gt; <span class="kw">if</span> is_prime(n) { Cons(n, Nil) } <span class="kw">else</span> {
+<a class="ln" id="L75" href="#L75">75</a>          <span class="kw">let</span> d := find_factor(n, n)
+<a class="ln" id="L76" href="#L76">76</a>          List::append(factor_loop(f, d), factor_loop(f, quotient(n, d)))
+<a class="ln" id="L77" href="#L77">77</a>        }
+<a class="ln" id="L78" href="#L78">78</a>      }
+<a class="ln" id="L79" href="#L79">79</a>    }
+<a class="ln" id="L80" href="#L80">80</a>  }
+<a class="ln" id="L81" href="#L81">81</a>}
+<a class="ln" id="L82" href="#L82">82</a><span class="kw">pub</span> <span class="kw">fn</span> factorize(n: Nat): List(Nat) { <a href="#L67">factor_loop</a>(n, n) }
+<a class="ln" id="L83" href="#L83">83</a>
+<a class="ln" id="L84" href="#L84">84</a><span class="kw">theorem</span> factor_loop_prime(
+<a class="ln" id="L85" href="#L85">85</a>  f: Nat,
+<a class="ln" id="L86" href="#L86">86</a>  j: Nat,
+<a class="ln" id="L87" href="#L87">87</a>  h: <a href="../src/primality.taut.html#L45">is_prime</a>(Succ(Succ(j))) = <span class="kw">true</span>
+<a class="ln" id="L88" href="#L88">88</a>): <a href="#L67">factor_loop</a>(Succ(f), Succ(Succ(j))) = Cons(Succ(Succ(j)), Nil) {
+<a class="ln" id="L89" href="#L89">89</a>  Eq::congr((b: Bool) =&gt; <span class="kw">if</span> b { Cons(Succ(Succ(j)), Nil) } <span class="kw">else</span> {
+<a class="ln" id="L90" href="#L90">90</a>    List::append(<a href="#L67">factor_loop</a>(f, <a href="../src/primality.taut.html#L151">find_factor</a>(Succ(Succ(j)), Succ(Succ(j)))),
+<a class="ln" id="L91" href="#L91">91</a>      <a href="#L67">factor_loop</a>(f, <a href="../src/factor_search.taut.html#L11">quotient</a>(Succ(Succ(j)), <a href="../src/primality.taut.html#L151">find_factor</a>(Succ(Succ(j)), Succ(Succ(j))))))
+<a class="ln" id="L92" href="#L92">92</a>  }, h)
+<a class="ln" id="L93" href="#L93">93</a>}
+<a class="ln" id="L94" href="#L94">94</a><span class="kw">theorem</span> factor_loop_composite(
+<a class="ln" id="L95" href="#L95">95</a>  f: Nat,
+<a class="ln" id="L96" href="#L96">96</a>  j: Nat,
+<a class="ln" id="L97" href="#L97">97</a>  h: <a href="../src/primality.taut.html#L45">is_prime</a>(Succ(Succ(j))) = <span class="kw">false</span>
+<a class="ln" id="L98" href="#L98">98</a>): <a href="#L67">factor_loop</a>(
+<a class="ln" id="L99" href="#L99">99</a>  Succ(f),
+<a class="ln" id="L100" href="#L100">100</a>  Succ(Succ(j))
+<a class="ln" id="L101" href="#L101">101</a>) = List::append(
+<a class="ln" id="L102" href="#L102">102</a>  <a href="#L67">factor_loop</a>(f, <a href="../src/primality.taut.html#L151">find_factor</a>(Succ(Succ(j)), Succ(Succ(j)))),
+<a class="ln" id="L103" href="#L103">103</a>  <a href="#L67">factor_loop</a>(f, <a href="../src/factor_search.taut.html#L11">quotient</a>(Succ(Succ(j)), <a href="../src/primality.taut.html#L151">find_factor</a>(Succ(Succ(j)), Succ(Succ(j)))))
+<a class="ln" id="L104" href="#L104">104</a>) {
+<a class="ln" id="L105" href="#L105">105</a>  Eq::congr((b: Bool) =&gt; <span class="kw">if</span> b { Cons(Succ(Succ(j)), Nil) } <span class="kw">else</span> {
+<a class="ln" id="L106" href="#L106">106</a>    List::append(<a href="#L67">factor_loop</a>(f, <a href="../src/primality.taut.html#L151">find_factor</a>(Succ(Succ(j)), Succ(Succ(j)))),
+<a class="ln" id="L107" href="#L107">107</a>      <a href="#L67">factor_loop</a>(f, <a href="../src/factor_search.taut.html#L11">quotient</a>(Succ(Succ(j)), <a href="../src/primality.taut.html#L151">find_factor</a>(Succ(Succ(j)), Succ(Succ(j))))))
+<a class="ln" id="L108" href="#L108">108</a>  }, h)
+<a class="ln" id="L109" href="#L109">109</a>}
+<a class="ln" id="L110" href="#L110">110</a><span class="kw">pub</span> <span class="kw">theorem</span> descending_bound(
+<a class="ln" id="L111" href="#L111">111</a>  m: Nat,
+<a class="ln" id="L112" href="#L112">112</a>  n: Nat,
+<a class="ln" id="L113" href="#L113">113</a>  f: Nat,
+<a class="ln" id="L114" href="#L114">114</a>  lt: <span class="mac">nat!</span>(`m &lt; n`),
+<a class="ln" id="L115" href="#L115">115</a>  bound: <span class="mac">nat!</span>(`n ≤ <span class="fn">Succ</span>(f)`)
+<a class="ln" id="L116" href="#L116">116</a>): <span class="mac">nat!</span>(`m ≤ f`) {
+<a class="ln" id="L117" href="#L117">117</a>  ⊢ <span class="mac">nat!</span>(`m ≤ f`) <span class="kw">from</span> <span class="kw">match</span> n {
+<a class="ln" id="L118" href="#L118">118</a>    Zero =&gt; False::elim(false_ne_true(Eq::trans(Eq::sym(Nat::lt_zero_false(m)), lt)))
+<a class="ln" id="L119" href="#L119">119</a>    Succ(k) =&gt; Nat::le_trans(m, k, f, lt, bound)
+<a class="ln" id="L120" href="#L120">120</a>  }
+<a class="ln" id="L121" href="#L121">121</a>}
+<a class="ln" id="L122" href="#L122">122</a>
+<a class="ln" id="L123" href="#L123">123</a><span class="kw">theorem</span> factor_loop_correct(
+<a class="ln" id="L124" href="#L124">124</a>  steps: Nat,
+<a class="ln" id="L125" href="#L125">125</a>  n: Nat,
+<a class="ln" id="L126" href="#L126">126</a>  positive: <span class="mac">nat!</span>(`<span class="num">0</span> &lt; n`),
+<a class="ln" id="L127" href="#L127">127</a>  bound: <span class="mac">nat!</span>(`n ≤ steps`)
+<a class="ln" id="L128" href="#L128">128</a>): <a href="#L16">Factorization</a>(n, <a href="#L67">factor_loop</a>(steps, n)) {
+<a class="ln" id="L129" href="#L129">129</a>  ⊢ Factorization(n, factor_loop(steps, n)) <span class="kw">from</span> <span class="kw">match</span> steps {
+<a class="ln" id="L130" href="#L130">130</a>    Zero =&gt; ⊢ Factorization(n, factor_loop(Zero, n)) <span class="kw">from</span> <span class="kw">match</span> n {
+<a class="ln" id="L131" href="#L131">131</a>      Zero =&gt; False::elim(false_ne_true(positive))
+<a class="ln" id="L132" href="#L132">132</a>      Succ(k) =&gt; False::elim(false_ne_true(Eq::trans(Eq::sym(Nat::lt_zero_false(k)), bound)))
+<a class="ln" id="L133" href="#L133">133</a>    }
+<a class="ln" id="L134" href="#L134">134</a>    Succ(f) =&gt; ⊢ Factorization(n, factor_loop(Succ(f), n)) <span class="kw">from</span> <span class="kw">match</span> n {
+<a class="ln" id="L135" href="#L135">135</a>      Zero =&gt; False::elim(false_ne_true(positive))
+<a class="ln" id="L136" href="#L136">136</a>      Succ(k) =&gt; ⊢ Factorization(Succ(k), factor_loop(Succ(f), Succ(k))) <span class="kw">from</span> <span class="kw">match</span> k {
+<a class="ln" id="L137" href="#L137">137</a>        Zero =&gt; Factored(PrimesNil, Refl)
+<a class="ln" id="L138" href="#L138">138</a>        Succ(j) =&gt; Or::elim(boolean_cases(is_prime(Succ(Succ(j)))),
+<a class="ln" id="L139" href="#L139">139</a>          (bad: is_prime(Succ(Succ(j))) = <span class="kw">false</span>) =&gt; {
+<a class="ln" id="L140" href="#L140">140</a>            <span class="kw">let</span> n := Succ(Succ(j))
+<a class="ln" id="L141" href="#L141">141</a>            <span class="kw">let</span> d := find_factor(n, n)
+<a class="ln" id="L142" href="#L142">142</a>            <span class="kw">let</span> w := searched_factor(n, Refl, bad)
+<a class="ln" id="L143" href="#L143">143</a>            Eq::subst((xs: List(Nat)) =&gt; Factorization(n, xs), Eq::sym(factor_loop_composite(f, j, bad)),
+<a class="ln" id="L144" href="#L144">144</a>              Eq::subst((x: Nat) =&gt; Factorization(x, List::append(factor_loop(f, d), factor_loop(f, quotient(n, d)))),
+<a class="ln" id="L145" href="#L145">145</a>                factor_product(n, d, w),
+<a class="ln" id="L146" href="#L146">146</a>                factorization_append(d, quotient(n, d), factor_loop(f, d), factor_loop(f, quotient(n, d)),
+<a class="ln" id="L147" href="#L147">147</a>                  factor_loop_correct(f, d, Nat::lt_of_succ_lt(<span class="num">0</span>, d, factor_positive(n, d, w)),
+<a class="ln" id="L148" href="#L148">148</a>                    descending_bound(d, n, f, searched_smaller(n, Refl, bad), bound)),
+<a class="ln" id="L149" href="#L149">149</a>                  factor_loop_correct(f, quotient(n, d), Nat::lt_of_succ_lt(<span class="num">0</span>, quotient(n, d), factor_quotient_positive(n, d, Refl, w)),
+<a class="ln" id="L150" href="#L150">150</a>                    descending_bound(quotient(n, d), n, f, factor_quotient_smaller(n, d, Refl, w), bound)))))
+<a class="ln" id="L151" href="#L151">151</a>          },
+<a class="ln" id="L152" href="#L152">152</a>          (good: is_prime(Succ(Succ(j))) = <span class="kw">true</span>) =&gt; Eq::subst((xs: List(Nat)) =&gt; Factorization(Succ(Succ(j)), xs),
+<a class="ln" id="L153" href="#L153">153</a>            Eq::sym(factor_loop_prime(f, j, good)),
+<a class="ln" id="L154" href="#L154">154</a>            Factored(PrimesCons(Succ(Succ(j)), Nil, is_prime_sound(Succ(Succ(j)), good), PrimesNil), Nat::mul_one_right(Succ(Succ(j))))))
+<a class="ln" id="L155" href="#L155">155</a>      }
+<a class="ln" id="L156" href="#L156">156</a>    }
+<a class="ln" id="L157" href="#L157">157</a>  }
+<a class="ln" id="L158" href="#L158">158</a>}
+<a class="ln" id="L159" href="#L159">159</a><span class="kw">pub</span> <span class="kw">theorem</span> factorize_correct(n: Nat, positive: <span class="mac">nat!</span>(`<span class="num">0</span> &lt; n`)): <a href="#L16">Factorization</a>(n, <a href="#L82">factorize</a>(n)) {
+<a class="ln" id="L160" href="#L160">160</a>  <a href="#L123">factor_loop_correct</a>(n, n, positive, Nat::le_refl(n))
+<a class="ln" id="L161" href="#L161">161</a>}
+</code></pre>
+</html>

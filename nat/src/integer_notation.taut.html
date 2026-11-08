@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/integer_notation.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/integer_notation.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::Base
+<a class="ln" id="L2" href="#L2">2</a><span class="kw">import</span> std::Int
+<a class="ln" id="L3" href="#L3">3</a><span class="kw">import</span> std::IntOrder
+<a class="ln" id="L4" href="#L4">4</a><span class="kw">import</span> std::prelude::Macro
+<a class="ln" id="L5" href="#L5">5</a><span class="kw">import</span> core::highlight
+<a class="ln" id="L6" href="#L6">6</a>
+<a class="ln" id="L7" href="#L7">7</a><span class="kw">pub</span> <span class="kw">fn</span> int_tokens(ts: List(SynTok)): List(SynHighlight) ! {Div} { math_tokens(ts) }
+<a class="ln" id="L8" href="#L8">8</a>
+<a class="ln" id="L9" href="#L9">9</a><span class="kw">syntax!</span>(int_notation, ```par
+<a class="ln" id="L10" href="#L10">10</a><span class="kw">%start</span> <span class="ty">Expr</span>
+<a class="ln" id="L11" href="#L11">11</a><span class="kw">%title</span> <span class="str">&quot;integer arithmetic&quot;</span>
+<a class="ln" id="L12" href="#L12">12</a><span class="kw">%%</span>
+<a class="ln" id="L13" href="#L13">13</a><span class="ty">Expr</span>: <span class="ty">Sum</span> [ <span class="ty">Relation</span> <span class="ty">Sum</span> ];
+<a class="ln" id="L14" href="#L14">14</a><span class="ty">Relation</span>: <span class="ty">EqOp</span> | <span class="ty">LeOp</span> | <span class="ty">LtOp</span>;
+<a class="ln" id="L15" href="#L15">15</a><span class="ty">Sum</span>: <span class="ty">Prod</span> { <span class="ty">AddOp</span> <span class="ty">Prod</span> };
+<a class="ln" id="L16" href="#L16">16</a><span class="ty">AddOp</span>: <span class="ty">Plus</span> | <span class="ty">Minus</span>;
+<a class="ln" id="L17" href="#L17">17</a><span class="ty">Prod</span>: <span class="ty">Atom</span> { <span class="ty">Star</span> <span class="ty">Atom</span> };
+<a class="ln" id="L18" href="#L18">18</a><span class="ty">Atom</span>: <span class="ty">Num</span> | <span class="ty">Reference</span> | <span class="ty">Paren</span> | <span class="ty">Embed</span> | <span class="ty">Lift</span> | <span class="ty">Difference</span> | <span class="ty">Negative</span>;
+<a class="ln" id="L19" href="#L19">19</a><span class="ty">Negative</span>: <span class="ty">Minus</span> <span class="ty">Atom</span>;
+<a class="ln" id="L20" href="#L20">20</a><span class="ty">Lift</span>: <span class="ty">Up</span> <span class="ty">NatAtom</span>;
+<a class="ln" id="L21" href="#L21">21</a><span class="ty">Difference</span>: <span class="ty">Diff</span> <span class="ty">LParen</span> <span class="ty">NatSum</span> <span class="ty">Comma</span> <span class="ty">NatSum</span> <span class="ty">RParen</span>;
+<a class="ln" id="L22" href="#L22">22</a><span class="ty">NatSum</span>: <span class="ty">NatProd</span> { <span class="ty">NativeAddOp</span> <span class="ty">NatProd</span> };
+<a class="ln" id="L23" href="#L23">23</a><span class="ty">NativeAddOp</span>: <span class="ty">Plus</span> | <span class="ty">Minus</span>;
+<a class="ln" id="L24" href="#L24">24</a><span class="ty">NatProd</span>: <span class="ty">NatAtom</span> { <span class="ty">Star</span> <span class="ty">NatAtom</span> };
+<a class="ln" id="L25" href="#L25">25</a><span class="ty">NatAtom</span>: <span class="ty">Num</span> | <span class="ty">NativeReference</span> | <span class="ty">Embed</span> | <span class="ty">NativeParen</span>;
+<a class="ln" id="L26" href="#L26">26</a><span class="ty">NativeReference</span>: <span class="ty">Name</span> [ <span class="ty">NativeArguments</span> ];
+<a class="ln" id="L27" href="#L27">27</a><span class="ty">NativeArguments</span>: <span class="ty">LParen</span> <span class="ty">NatSum</span> { <span class="ty">Comma</span> <span class="ty">NatSum</span> } <span class="ty">RParen</span>;
+<a class="ln" id="L28" href="#L28">28</a><span class="ty">NativeParen</span>: <span class="ty">LParen</span> <span class="ty">NatSum</span> <span class="ty">RParen</span>;
+<a class="ln" id="L29" href="#L29">29</a><span class="ty">Up</span>: <span class="str">'↑'</span>;
+<a class="ln" id="L30" href="#L30">30</a><span class="ty">Diff</span>: <span class="str">'diff'</span>;
+<a class="ln" id="L31" href="#L31">31</a><span class="ty">Reference</span>: <span class="ty">Name</span> [ <span class="ty">Arguments</span> ];
+<a class="ln" id="L32" href="#L32">32</a><span class="ty">Arguments</span>: <span class="ty">LParen</span> <span class="ty">Expr</span> { <span class="ty">Comma</span> <span class="ty">Expr</span> } <span class="ty">RParen</span>;
+<a class="ln" id="L33" href="#L33">33</a><span class="ty">Paren</span>: <span class="ty">LParen</span> <span class="ty">Expr</span> <span class="ty">RParen</span>;
+<a class="ln" id="L34" href="#L34">34</a><span class="ty">Embed</span>: <span class="ty">TautoExpr</span>;
+<a class="ln" id="L35" href="#L35">35</a><span class="ty">Name</span>: <span class="str">/[_\p{L}][_\p{L}\p{N}']*(::[_\p{L}][_\p{L}\p{N}']*)*/</span>;
+<a class="ln" id="L36" href="#L36">36</a><span class="ty">Num</span>: <span class="str">/[0-9]+/</span>;
+<a class="ln" id="L37" href="#L37">37</a><span class="ty">EqOp</span>: <span class="str">'='</span>;
+<a class="ln" id="L38" href="#L38">38</a><span class="ty">LeOp</span>: <span class="str">'≤'</span>;
+<a class="ln" id="L39" href="#L39">39</a><span class="ty">LtOp</span>: <span class="str">'&lt;'</span>;
+<a class="ln" id="L40" href="#L40">40</a><span class="ty">Plus</span>: <span class="str">'+'</span>;
+<a class="ln" id="L41" href="#L41">41</a><span class="ty">Minus</span>: <span class="str">'-'</span>;
+<a class="ln" id="L42" href="#L42">42</a><span class="ty">Star</span>: <span class="str">'*'</span>;
+<a class="ln" id="L43" href="#L43">43</a><span class="ty">Comma</span>: <span class="str">','</span>;
+<a class="ln" id="L44" href="#L44">44</a><span class="ty">LParen</span>: <span class="str">'('</span>;
+<a class="ln" id="L45" href="#L45">45</a><span class="ty">RParen</span>: <span class="str">')'</span>;
+<a class="ln" id="L46" href="#L46">46</a>```, <span class="kw">with</span>(tokens: int_tokens)) =&gt; <span class="kw">struct</span> Expr, <span class="kw">struct</span> Expr_Opt1, <span class="kw">enum</span> Relation,
+<a class="ln" id="L47" href="#L47">47</a>  <span class="kw">struct</span> Sum, <span class="kw">struct</span> Sum_Rep1, <span class="kw">enum</span> AddOp, <span class="kw">struct</span> Prod, <span class="kw">struct</span> Prod_Rep1,
+<a class="ln" id="L48" href="#L48">48</a>  <span class="kw">enum</span> Atom, <span class="kw">struct</span> Lift, <span class="kw">struct</span> Difference, <span class="kw">struct</span> Negative, <span class="kw">enum</span> NatAtom,
+<a class="ln" id="L49" href="#L49">49</a>  <span class="kw">struct</span> NatSum, <span class="kw">struct</span> NatSum_Rep1, <span class="kw">enum</span> NativeAddOp, <span class="kw">struct</span> NatProd, <span class="kw">struct</span> NatProd_Rep1,
+<a class="ln" id="L50" href="#L50">50</a>  <span class="kw">struct</span> NativeReference, <span class="kw">struct</span> NativeArguments, <span class="kw">struct</span> NativeArguments_Rep1, <span class="kw">struct</span> NativeParen, <span class="kw">struct</span> Reference, <span class="kw">struct</span> Arguments, <span class="kw">struct</span> Arguments_Rep1, <span class="kw">struct</span> Paren, <span class="kw">fn</span> parse
+<a class="ln" id="L51" href="#L51">51</a>
+<a class="ln" id="L52" href="#L52">52</a><span class="kw">pub</span> <span class="kw">fn</span> int_name(t: SynToken): SynExpr {
+<a class="ln" id="L53" href="#L53">53</a>  ExVar(Syn::ident(t))
+<a class="ln" id="L54" href="#L54">54</a>}
+<a class="ln" id="L55" href="#L55">55</a><span class="kw">pub</span> <span class="kw">fn</span> int_arguments(
+<a class="ln" id="L56" href="#L56">56</a>  first: int_notation::Expr,
+<a class="ln" id="L57" href="#L57">57</a>  rest: List(int_notation::Arguments_Rep1)
+<a class="ln" id="L58" href="#L58">58</a>): List(SynExpr) ! {macro_error, Div} {
+<a class="ln" id="L59" href="#L59">59</a>  Cons(<a href="#L167">int_expression</a>(first), <a href="#L61">int_more_arguments</a>(rest))
+<a class="ln" id="L60" href="#L60">60</a>}
+<a class="ln" id="L61" href="#L61">61</a><span class="kw">pub</span> <span class="kw">fn</span> int_more_arguments(
+<a class="ln" id="L62" href="#L62">62</a>  rest: List(int_notation::Arguments_Rep1)
+<a class="ln" id="L63" href="#L63">63</a>): List(SynExpr) ! {macro_error, Div} {
+<a class="ln" id="L64" href="#L64">64</a>  <span class="kw">match</span> rest { Nil =&gt; Nil
+<a class="ln" id="L65" href="#L65">65</a>    Cons(r, more) =&gt; Cons(<a href="#L167">int_expression</a>(r.expr), <a href="#L61">int_more_arguments</a>(more)) }
+<a class="ln" id="L66" href="#L66">66</a>}
+<a class="ln" id="L67" href="#L67">67</a><span class="kw">pub</span> <span class="kw">fn</span> int_atom(t: int_notation::Atom): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L68" href="#L68">68</a>  <span class="kw">match</span> t {
+<a class="ln" id="L69" href="#L69">69</a>    Num(tok) =&gt; {
+<a class="ln" id="L70" href="#L70">70</a>      <span class="kw">let</span> n := ExNat(tok.text, tok.span)
+<a class="ln" id="L71" href="#L71">71</a>      <span class="kw">quote</span> { IntOfNat($n) }
+<a class="ln" id="L72" href="#L72">72</a>    }
+<a class="ln" id="L73" href="#L73">73</a>    Reference(r) =&gt; <span class="kw">match</span> r.arguments {
+<a class="ln" id="L74" href="#L74">74</a>      None =&gt; <a href="#L52">int_name</a>(r.name)
+<a class="ln" id="L75" href="#L75">75</a>      Some(args) =&gt; ExApp(<a href="#L52">int_name</a>(r.name), <a href="#L55">int_arguments</a>(args.expr, args.rep), r.span)
+<a class="ln" id="L76" href="#L76">76</a>    }
+<a class="ln" id="L77" href="#L77">77</a>    Paren(p) =&gt; <a href="#L167">int_expression</a>(p.expr)
+<a class="ln" id="L78" href="#L78">78</a>    Embed(e) =&gt; e
+<a class="ln" id="L79" href="#L79">79</a>    Negative(n) =&gt; { <span class="kw">let</span> x := int_atom(n.atom)
+<a class="ln" id="L80" href="#L80">80</a>      <span class="kw">quote</span> { Int::neg($x) } }
+<a class="ln" id="L81" href="#L81">81</a>    Lift(l) =&gt; { <span class="kw">let</span> n := int_nat_atom(l.nat_atom)
+<a class="ln" id="L82" href="#L82">82</a>      <span class="kw">quote</span> { IntOfNat($n) } }
+<a class="ln" id="L83" href="#L83">83</a>    Difference(d) =&gt; { <span class="kw">let</span> p := int_native_sum(d.nat_sum)
+<a class="ln" id="L84" href="#L84">84</a>      <span class="kw">let</span> n := int_native_sum(d.nat_sum_2)
+<a class="ln" id="L85" href="#L85">85</a>      <span class="kw">quote</span> { Int::sub_nat($p, $n) } }
+<a class="ln" id="L86" href="#L86">86</a>  }
+<a class="ln" id="L87" href="#L87">87</a>}
+<a class="ln" id="L88" href="#L88">88</a><span class="kw">pub</span> <span class="kw">fn</span> int_native_args(
+<a class="ln" id="L89" href="#L89">89</a>  xs: List(int_notation::NativeArguments_Rep1)
+<a class="ln" id="L90" href="#L90">90</a>): List(SynExpr) ! {macro_error, Div} {
+<a class="ln" id="L91" href="#L91">91</a>  <span class="kw">match</span> xs { Nil =&gt; Nil
+<a class="ln" id="L92" href="#L92">92</a>    Cons(x, rest) =&gt; Cons(<a href="#L132">int_native_sum</a>(x.nat_sum), <a href="#L88">int_native_args</a>(rest)) }
+<a class="ln" id="L93" href="#L93">93</a>}
+<a class="ln" id="L94" href="#L94">94</a><span class="kw">pub</span> <span class="kw">fn</span> int_nat_atom(t: int_notation::NatAtom): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L95" href="#L95">95</a>  <span class="kw">match</span> t {
+<a class="ln" id="L96" href="#L96">96</a>    Num(tok) =&gt; ExNat(tok.text, tok.span)
+<a class="ln" id="L97" href="#L97">97</a>    Embed(e) =&gt; e
+<a class="ln" id="L98" href="#L98">98</a>    NativeParen(p) =&gt; <a href="#L132">int_native_sum</a>(p.nat_sum)
+<a class="ln" id="L99" href="#L99">99</a>    NativeReference(r) =&gt; <span class="kw">match</span> r.native_arguments {
+<a class="ln" id="L100" href="#L100">100</a>      None =&gt; <a href="#L52">int_name</a>(r.name)
+<a class="ln" id="L101" href="#L101">101</a>      Some(args) =&gt; ExApp(
+<a class="ln" id="L102" href="#L102">102</a>        <a href="#L52">int_name</a>(r.name),
+<a class="ln" id="L103" href="#L103">103</a>        Cons(<a href="#L132">int_native_sum</a>(args.nat_sum), <a href="#L88">int_native_args</a>(args.rep)),
+<a class="ln" id="L104" href="#L104">104</a>        r.span
+<a class="ln" id="L105" href="#L105">105</a>      )
+<a class="ln" id="L106" href="#L106">106</a>    }
+<a class="ln" id="L107" href="#L107">107</a>  }
+<a class="ln" id="L108" href="#L108">108</a>}
+<a class="ln" id="L109" href="#L109">109</a><span class="kw">pub</span> <span class="kw">fn</span> int_native_factors(
+<a class="ln" id="L110" href="#L110">110</a>  acc: SynExpr,
+<a class="ln" id="L111" href="#L111">111</a>  xs: List(int_notation::NatProd_Rep1)
+<a class="ln" id="L112" href="#L112">112</a>): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L113" href="#L113">113</a>  <span class="kw">match</span> xs { Nil =&gt; acc
+<a class="ln" id="L114" href="#L114">114</a>    Cons(x, rest) =&gt; { <span class="kw">let</span> b := int_nat_atom(x.nat_atom)
+<a class="ln" id="L115" href="#L115">115</a>      int_native_factors(<span class="kw">quote</span> { Nat::mul($acc, $b) }, rest) }
+<a class="ln" id="L116" href="#L116">116</a>  }
+<a class="ln" id="L117" href="#L117">117</a>}
+<a class="ln" id="L118" href="#L118">118</a><span class="kw">pub</span> <span class="kw">fn</span> int_native_prod(p: int_notation::NatProd): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L119" href="#L119">119</a>  <a href="#L109">int_native_factors</a>(<a href="#L94">int_nat_atom</a>(p.nat_atom), p.rep)
+<a class="ln" id="L120" href="#L120">120</a>}
+<a class="ln" id="L121" href="#L121">121</a><span class="kw">pub</span> <span class="kw">fn</span> int_native_summands(
+<a class="ln" id="L122" href="#L122">122</a>  acc: SynExpr,
+<a class="ln" id="L123" href="#L123">123</a>  xs: List(int_notation::NatSum_Rep1)
+<a class="ln" id="L124" href="#L124">124</a>): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L125" href="#L125">125</a>  <span class="kw">match</span> xs { Nil =&gt; acc
+<a class="ln" id="L126" href="#L126">126</a>    Cons(x, rest) =&gt; { <span class="kw">let</span> b := int_native_prod(x.nat_prod)
+<a class="ln" id="L127" href="#L127">127</a>      <span class="kw">let</span> next := <span class="kw">match</span> x.native_add_op { Plus(t) =&gt; <span class="kw">quote</span> { Nat::add($acc, $b) }
+<a class="ln" id="L128" href="#L128">128</a>        Minus(t) =&gt; <span class="kw">quote</span> { Nat::sub($acc, $b) } }
+<a class="ln" id="L129" href="#L129">129</a>      int_native_summands(next, rest) }
+<a class="ln" id="L130" href="#L130">130</a>  }
+<a class="ln" id="L131" href="#L131">131</a>}
+<a class="ln" id="L132" href="#L132">132</a><span class="kw">pub</span> <span class="kw">fn</span> int_native_sum(s: int_notation::NatSum): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L133" href="#L133">133</a>  <a href="#L121">int_native_summands</a>(<a href="#L118">int_native_prod</a>(s.nat_prod), s.rep)
+<a class="ln" id="L134" href="#L134">134</a>}
+<a class="ln" id="L135" href="#L135">135</a><span class="kw">pub</span> <span class="kw">fn</span> int_factors(
+<a class="ln" id="L136" href="#L136">136</a>  acc: SynExpr,
+<a class="ln" id="L137" href="#L137">137</a>  rest: List(int_notation::Prod_Rep1)
+<a class="ln" id="L138" href="#L138">138</a>): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L139" href="#L139">139</a>  <span class="kw">match</span> rest { Nil =&gt; acc
+<a class="ln" id="L140" href="#L140">140</a>    Cons(r, more) =&gt; {
+<a class="ln" id="L141" href="#L141">141</a>      <span class="kw">let</span> t := int_atom(r.atom)
+<a class="ln" id="L142" href="#L142">142</a>      int_factors(<span class="kw">quote</span> { Int::mul($acc, $t) }, more)
+<a class="ln" id="L143" href="#L143">143</a>    }
+<a class="ln" id="L144" href="#L144">144</a>  }
+<a class="ln" id="L145" href="#L145">145</a>}
+<a class="ln" id="L146" href="#L146">146</a><span class="kw">pub</span> <span class="kw">fn</span> int_product(p: int_notation::Prod): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L147" href="#L147">147</a>  <a href="#L135">int_factors</a>(<a href="#L67">int_atom</a>(p.atom), p.rep)
+<a class="ln" id="L148" href="#L148">148</a>}
+<a class="ln" id="L149" href="#L149">149</a><span class="kw">pub</span> <span class="kw">fn</span> int_summands(
+<a class="ln" id="L150" href="#L150">150</a>  acc: SynExpr,
+<a class="ln" id="L151" href="#L151">151</a>  rest: List(int_notation::Sum_Rep1)
+<a class="ln" id="L152" href="#L152">152</a>): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L153" href="#L153">153</a>  <span class="kw">match</span> rest { Nil =&gt; acc
+<a class="ln" id="L154" href="#L154">154</a>    Cons(r, more) =&gt; {
+<a class="ln" id="L155" href="#L155">155</a>      <span class="kw">let</span> t := int_product(r.prod)
+<a class="ln" id="L156" href="#L156">156</a>      <span class="kw">let</span> next := <span class="kw">match</span> r.add_op {
+<a class="ln" id="L157" href="#L157">157</a>        Plus(tok) =&gt; <span class="kw">quote</span> { Int::add($acc, $t) }
+<a class="ln" id="L158" href="#L158">158</a>        Minus(tok) =&gt; <span class="kw">quote</span> { Int::sub($acc, $t) }
+<a class="ln" id="L159" href="#L159">159</a>      }
+<a class="ln" id="L160" href="#L160">160</a>      int_summands(next, more)
+<a class="ln" id="L161" href="#L161">161</a>    }
+<a class="ln" id="L162" href="#L162">162</a>  }
+<a class="ln" id="L163" href="#L163">163</a>}
+<a class="ln" id="L164" href="#L164">164</a><span class="kw">pub</span> <span class="kw">fn</span> int_sum(s: int_notation::Sum): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L165" href="#L165">165</a>  <a href="#L149">int_summands</a>(<a href="#L146">int_product</a>(s.prod), s.rep)
+<a class="ln" id="L166" href="#L166">166</a>}
+<a class="ln" id="L167" href="#L167">167</a><span class="kw">pub</span> <span class="kw">fn</span> int_expression(e: int_notation::Expr): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L168" href="#L168">168</a>  <span class="kw">let</span> l := <a href="#L164">int_sum</a>(e.sum)
+<a class="ln" id="L169" href="#L169">169</a>  <span class="kw">match</span> e.opt {
+<a class="ln" id="L170" href="#L170">170</a>    None =&gt; l
+<a class="ln" id="L171" href="#L171">171</a>    Some(r) =&gt; {
+<a class="ln" id="L172" href="#L172">172</a>      <span class="kw">let</span> b := int_sum(r.sum)
+<a class="ln" id="L173" href="#L173">173</a>      <span class="kw">match</span> r.relation {
+<a class="ln" id="L174" href="#L174">174</a>        EqOp(tok) =&gt; <span class="kw">quote</span> { Eq(Int, $l, $b) }
+<a class="ln" id="L175" href="#L175">175</a>        LeOp(tok) =&gt; <span class="kw">quote</span> { Eq(Bool, Int::le($l, $b), <span class="kw">true</span>) }
+<a class="ln" id="L176" href="#L176">176</a>        LtOp(tok) =&gt; <span class="kw">quote</span> { Eq(Bool, Int::lt($l, $b), <span class="kw">true</span>) }
+<a class="ln" id="L177" href="#L177">177</a>      }
+<a class="ln" id="L178" href="#L178">178</a>    }
+<a class="ln" id="L179" href="#L179">179</a>  }
+<a class="ln" id="L180" href="#L180">180</a>}
+<a class="ln" id="L181" href="#L181">181</a><span class="kw">pub</span> <span class="kw">macro</span> <span class="kw">fn</span> int(e: int_notation::Expr): SynExpr ! {macro_error, Div} { <a href="#L167">int_expression</a>(e) }
+<a class="ln" id="L182" href="#L182">182</a><span class="com">// Compatibility name for existing users; the grammar now also accepts terms.</span>
+<a class="ln" id="L183" href="#L183">183</a><span class="kw">pub</span> <span class="kw">macro</span> <span class="kw">fn</span> int_eq(e: int_notation::Expr): SynExpr ! {macro_error, Div} { <a href="#L167">int_expression</a>(e) }
+</code></pre>
+</html>

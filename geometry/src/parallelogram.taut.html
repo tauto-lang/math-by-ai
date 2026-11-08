@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/parallelogram.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/parallelogram.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::Base
+<a class="ln" id="L2" href="#L2">2</a><span class="kw">import</span> algebra::ring
+<a class="ln" id="L3" href="#L3">3</a><span class="kw">import</span> algebra::ring_norm
+<a class="ln" id="L4" href="#L4">4</a><span class="kw">import</span> algebra::ring_notation { ring }
+<a class="ln" id="L5" href="#L5">5</a><span class="kw">import</span> algebra::ring_tactic { ring_norm }
+<a class="ln" id="L6" href="#L6">6</a><span class="kw">import</span> <span class="str">&quot;point.taut&quot;</span>
+<a class="ln" id="L7" href="#L7">7</a><span class="kw">import</span> <span class="str">&quot;notation.taut&quot;</span> { geo }
+<a class="ln" id="L8" href="#L8">8</a>
+<a class="ln" id="L9" href="#L9">9</a><span class="com">// The key identity of the parallelogram, one coordinate at a time. With</span>
+<a class="ln" id="L10" href="#L10">10</a><span class="com">// u = B - A, v = D - A and e = (C - D) - u, which is also (C - B) - v:</span>
+<a class="ln" id="L11" href="#L11">11</a><span class="com">//</span>
+<a class="ln" id="L12" href="#L12">12</a><span class="com">//   e * (u × v) = (u × (C - D)) * v - (v × (C - B)) * u</span>
+<a class="ln" id="L13" href="#L13">13</a><span class="com">//</span>
+<a class="ln" id="L14" href="#L14">14</a><span class="com">// so when AB ∥ DC and AD ∥ BC the right side is 0, and e is 0 when u × v is not.</span>
+<a class="ln" id="L15" href="#L15">15</a><span class="kw">pub</span> <span class="kw">theorem</span> parallelogram_key_x&lt;K&gt;(
+<a class="ln" id="L16" href="#L16">16</a>  add: (K, K) -&gt; K,
+<a class="ln" id="L17" href="#L17">17</a>  zero: K,
+<a class="ln" id="L18" href="#L18">18</a>  neg: (K) -&gt; K,
+<a class="ln" id="L19" href="#L19">19</a>  mul: (K, K) -&gt; K,
+<a class="ln" id="L20" href="#L20">20</a>  one: K,
+<a class="ln" id="L21" href="#L21">21</a>  r: CommRing(K, add, zero, neg, mul, one),
+<a class="ln" id="L22" href="#L22">22</a>  A: <a href="../src/point.taut.html#L4">Point</a>(K),
+<a class="ln" id="L23" href="#L23">23</a>  B: <a href="../src/point.taut.html#L4">Point</a>(K),
+<a class="ln" id="L24" href="#L24">24</a>  C: <a href="../src/point.taut.html#L4">Point</a>(K),
+<a class="ln" id="L25" href="#L25">25</a>  D: <a href="../src/point.taut.html#L4">Point</a>(K)
+<a class="ln" id="L26" href="#L26">26</a>): <span class="mac">ring!</span>(```
+<a class="ln" id="L27" href="#L27">27</a>    add, zero, neg, mul, one;
+<a class="ln" id="L28" href="#L28">28</a>    ((<span class="fn">px</span>(C) - <span class="fn">px</span>(D)) - (<span class="fn">px</span>(B) - <span class="fn">px</span>(A))) * ((<span class="fn">px</span>(B) - <span class="fn">px</span>(A)) * (<span class="fn">py</span>(D) - <span class="fn">py</span>(A)) - (<span class="fn">py</span>(B) - <span class="fn">py</span>(A)) * (<span class="fn">px</span>(D) - <span class="fn">px</span>(A)))
+<a class="ln" id="L29" href="#L29">29</a>    = ((<span class="fn">px</span>(B) - <span class="fn">px</span>(A)) * (<span class="fn">py</span>(C) - <span class="fn">py</span>(D)) - (<span class="fn">py</span>(B) - <span class="fn">py</span>(A)) * (<span class="fn">px</span>(C) - <span class="fn">px</span>(D))) * (<span class="fn">px</span>(D) - <span class="fn">px</span>(A))
+<a class="ln" id="L30" href="#L30">30</a>    - ((<span class="fn">px</span>(D) - <span class="fn">px</span>(A)) * (<span class="fn">py</span>(C) - <span class="fn">py</span>(B)) - (<span class="fn">py</span>(D) - <span class="fn">py</span>(A)) * (<span class="fn">px</span>(C) - <span class="fn">px</span>(B))) * (<span class="fn">px</span>(B) - <span class="fn">px</span>(A))
+<a class="ln" id="L31" href="#L31">31</a>  ```) {
+<a class="ln" id="L32" href="#L32">32</a>  <span class="kw">by</span> <span class="mac">ring_norm!</span>(r): <span class="mac">ring!</span>(```
+<a class="ln" id="L33" href="#L33">33</a>    add, zero, neg, mul, one;
+<a class="ln" id="L34" href="#L34">34</a>      ((<span class="fn">px</span>(C) - <span class="fn">px</span>(D)) - (<span class="fn">px</span>(B) - <span class="fn">px</span>(A))) * ((<span class="fn">px</span>(B) - <span class="fn">px</span>(A)) * (<span class="fn">py</span>(D) - <span class="fn">py</span>(A)) - (<span class="fn">py</span>(B) - <span class="fn">py</span>(A)) * (<span class="fn">px</span>(D) - <span class="fn">px</span>(A)))
+<a class="ln" id="L35" href="#L35">35</a>      = ((<span class="fn">px</span>(B) - <span class="fn">px</span>(A)) * (<span class="fn">py</span>(C) - <span class="fn">py</span>(D)) - (<span class="fn">py</span>(B) - <span class="fn">py</span>(A)) * (<span class="fn">px</span>(C) - <span class="fn">px</span>(D))) * (<span class="fn">px</span>(D) - <span class="fn">px</span>(A))
+<a class="ln" id="L36" href="#L36">36</a>      - ((<span class="fn">px</span>(D) - <span class="fn">px</span>(A)) * (<span class="fn">py</span>(C) - <span class="fn">py</span>(B)) - (<span class="fn">py</span>(D) - <span class="fn">py</span>(A)) * (<span class="fn">px</span>(C) - <span class="fn">px</span>(B))) * (<span class="fn">px</span>(B) - <span class="fn">px</span>(A))
+<a class="ln" id="L37" href="#L37">37</a>    ```) {}
+<a class="ln" id="L38" href="#L38">38</a>}
+<a class="ln" id="L39" href="#L39">39</a>
+<a class="ln" id="L40" href="#L40">40</a><span class="kw">pub</span> <span class="kw">theorem</span> parallelogram_key_y&lt;K&gt;(
+<a class="ln" id="L41" href="#L41">41</a>  add: (K, K) -&gt; K,
+<a class="ln" id="L42" href="#L42">42</a>  zero: K,
+<a class="ln" id="L43" href="#L43">43</a>  neg: (K) -&gt; K,
+<a class="ln" id="L44" href="#L44">44</a>  mul: (K, K) -&gt; K,
+<a class="ln" id="L45" href="#L45">45</a>  one: K,
+<a class="ln" id="L46" href="#L46">46</a>  r: CommRing(K, add, zero, neg, mul, one),
+<a class="ln" id="L47" href="#L47">47</a>  A: <a href="../src/point.taut.html#L4">Point</a>(K),
+<a class="ln" id="L48" href="#L48">48</a>  B: <a href="../src/point.taut.html#L4">Point</a>(K),
+<a class="ln" id="L49" href="#L49">49</a>  C: <a href="../src/point.taut.html#L4">Point</a>(K),
+<a class="ln" id="L50" href="#L50">50</a>  D: <a href="../src/point.taut.html#L4">Point</a>(K)
+<a class="ln" id="L51" href="#L51">51</a>): <span class="mac">ring!</span>(```
+<a class="ln" id="L52" href="#L52">52</a>    add, zero, neg, mul, one;
+<a class="ln" id="L53" href="#L53">53</a>    ((<span class="fn">py</span>(C) - <span class="fn">py</span>(D)) - (<span class="fn">py</span>(B) - <span class="fn">py</span>(A))) * ((<span class="fn">px</span>(B) - <span class="fn">px</span>(A)) * (<span class="fn">py</span>(D) - <span class="fn">py</span>(A)) - (<span class="fn">py</span>(B) - <span class="fn">py</span>(A)) * (<span class="fn">px</span>(D) - <span class="fn">px</span>(A)))
+<a class="ln" id="L54" href="#L54">54</a>    = ((<span class="fn">px</span>(B) - <span class="fn">px</span>(A)) * (<span class="fn">py</span>(C) - <span class="fn">py</span>(D)) - (<span class="fn">py</span>(B) - <span class="fn">py</span>(A)) * (<span class="fn">px</span>(C) - <span class="fn">px</span>(D))) * (<span class="fn">py</span>(D) - <span class="fn">py</span>(A))
+<a class="ln" id="L55" href="#L55">55</a>    - ((<span class="fn">px</span>(D) - <span class="fn">px</span>(A)) * (<span class="fn">py</span>(C) - <span class="fn">py</span>(B)) - (<span class="fn">py</span>(D) - <span class="fn">py</span>(A)) * (<span class="fn">px</span>(C) - <span class="fn">px</span>(B))) * (<span class="fn">py</span>(B) - <span class="fn">py</span>(A))
+<a class="ln" id="L56" href="#L56">56</a>  ```) {
+<a class="ln" id="L57" href="#L57">57</a>  <span class="kw">by</span> <span class="mac">ring_norm!</span>(r): <span class="mac">ring!</span>(```
+<a class="ln" id="L58" href="#L58">58</a>    add, zero, neg, mul, one;
+<a class="ln" id="L59" href="#L59">59</a>      ((<span class="fn">py</span>(C) - <span class="fn">py</span>(D)) - (<span class="fn">py</span>(B) - <span class="fn">py</span>(A))) * ((<span class="fn">px</span>(B) - <span class="fn">px</span>(A)) * (<span class="fn">py</span>(D) - <span class="fn">py</span>(A)) - (<span class="fn">py</span>(B) - <span class="fn">py</span>(A)) * (<span class="fn">px</span>(D) - <span class="fn">px</span>(A)))
+<a class="ln" id="L60" href="#L60">60</a>      = ((<span class="fn">px</span>(B) - <span class="fn">px</span>(A)) * (<span class="fn">py</span>(C) - <span class="fn">py</span>(D)) - (<span class="fn">py</span>(B) - <span class="fn">py</span>(A)) * (<span class="fn">px</span>(C) - <span class="fn">px</span>(D))) * (<span class="fn">py</span>(D) - <span class="fn">py</span>(A))
+<a class="ln" id="L61" href="#L61">61</a>      - ((<span class="fn">px</span>(D) - <span class="fn">px</span>(A)) * (<span class="fn">py</span>(C) - <span class="fn">py</span>(B)) - (<span class="fn">py</span>(D) - <span class="fn">py</span>(A)) * (<span class="fn">px</span>(C) - <span class="fn">px</span>(B))) * (<span class="fn">py</span>(B) - <span class="fn">py</span>(A))
+<a class="ln" id="L62" href="#L62">62</a>    ```) {}
+<a class="ln" id="L63" href="#L63">63</a>}
+<a class="ln" id="L64" href="#L64">64</a>
+<a class="ln" id="L65" href="#L65">65</a><span class="com">// `x = 0` and `y = 0` make `x a - y b = 0`; so `e k = x a - y b` with `k ≠ 0` makes `e = 0`.</span>
+<a class="ln" id="L66" href="#L66">66</a><span class="kw">pub</span> <span class="kw">theorem</span> cancel_combination&lt;K, e: K, k: K, x: K, y: K, a: K, b: K&gt;(
+<a class="ln" id="L67" href="#L67">67</a>  add: (K, K) -&gt; K,
+<a class="ln" id="L68" href="#L68">68</a>  zero: K,
+<a class="ln" id="L69" href="#L69">69</a>  neg: (K) -&gt; K,
+<a class="ln" id="L70" href="#L70">70</a>  mul: (K, K) -&gt; K,
+<a class="ln" id="L71" href="#L71">71</a>  one: K,
+<a class="ln" id="L72" href="#L72">72</a>  d: IntegralDomain(K, add, zero, neg, mul, one),
+<a class="ln" id="L73" href="#L73">73</a>  nonzero: (k = zero) -&gt; False,
+<a class="ln" id="L74" href="#L74">74</a>  key: mul(e, k) = add(mul(x, a), neg(mul(y, b))),
+<a class="ln" id="L75" href="#L75">75</a>  hx: x = zero,
+<a class="ln" id="L76" href="#L76">76</a>  hy: y = zero
+<a class="ln" id="L77" href="#L77">77</a>): e = zero {
+<a class="ln" id="L78" href="#L78">78</a>  <span class="kw">let</span> r := domain_ring(add, zero, neg, mul, one, d)
+<a class="ln" id="L79" href="#L79">79</a>  domain_cancel(
+<a class="ln" id="L80" href="#L80">80</a>    add,
+<a class="ln" id="L81" href="#L81">81</a>    zero,
+<a class="ln" id="L82" href="#L82">82</a>    neg,
+<a class="ln" id="L83" href="#L83">83</a>    mul,
+<a class="ln" id="L84" href="#L84">84</a>    one,
+<a class="ln" id="L85" href="#L85">85</a>    d,
+<a class="ln" id="L86" href="#L86">86</a>    e,
+<a class="ln" id="L87" href="#L87">87</a>    zero,
+<a class="ln" id="L88" href="#L88">88</a>    k,
+<a class="ln" id="L89" href="#L89">89</a>    nonzero,
+<a class="ln" id="L90" href="#L90">90</a>    Eq::trans(
+<a class="ln" id="L91" href="#L91">91</a>      key,
+<a class="ln" id="L92" href="#L92">92</a>      Eq::trans(
+<a class="ln" id="L93" href="#L93">93</a>        Eq::congr((z: K) =&gt; add(mul(z, a), neg(mul(y, b))), hx),
+<a class="ln" id="L94" href="#L94">94</a>        Eq::trans(
+<a class="ln" id="L95" href="#L95">95</a>          Eq::congr((z: K) =&gt; add(mul(zero, a), neg(mul(z, b))), hy),
+<a class="ln" id="L96" href="#L96">96</a>          <span class="kw">by</span> <span class="mac">ring_norm!</span>(r): add(mul(zero, a), neg(mul(zero, b))) = mul(zero, k) {}
+<a class="ln" id="L97" href="#L97">97</a>        )
+<a class="ln" id="L98" href="#L98">98</a>      )
+<a class="ln" id="L99" href="#L99">99</a>    )
+<a class="ln" id="L100" href="#L100">100</a>  )
+<a class="ln" id="L101" href="#L101">101</a>}
+<a class="ln" id="L102" href="#L102">102</a>
+<a class="ln" id="L103" href="#L103">103</a><span class="com">// `(c - b) - (d - a) = (c - d) - (b - a)`: the same difference of the sides.</span>
+<a class="ln" id="L104" href="#L104">104</a><span class="kw">pub</span> <span class="kw">theorem</span> swap_differences&lt;K&gt;(
+<a class="ln" id="L105" href="#L105">105</a>  add: (K, K) -&gt; K,
+<a class="ln" id="L106" href="#L106">106</a>  zero: K,
+<a class="ln" id="L107" href="#L107">107</a>  neg: (K) -&gt; K,
+<a class="ln" id="L108" href="#L108">108</a>  mul: (K, K) -&gt; K,
+<a class="ln" id="L109" href="#L109">109</a>  one: K,
+<a class="ln" id="L110" href="#L110">110</a>  r: CommRing(K, add, zero, neg, mul, one),
+<a class="ln" id="L111" href="#L111">111</a>  a: K,
+<a class="ln" id="L112" href="#L112">112</a>  b: K,
+<a class="ln" id="L113" href="#L113">113</a>  c: K,
+<a class="ln" id="L114" href="#L114">114</a>  dd: K
+<a class="ln" id="L115" href="#L115">115</a>): <span class="mac">ring!</span>(`add, zero, neg, mul, one; (c - b) - (dd - a) = (c - dd) - (b - a)`) {
+<a class="ln" id="L116" href="#L116">116</a>  <span class="kw">by</span> <span class="mac">ring_norm!</span>(r): <span class="mac">ring!</span>(`add, zero, neg, mul, one; (c - b) - (dd - a) = (c - dd) - (b - a)`) {}
+<a class="ln" id="L117" href="#L117">117</a>}
+<a class="ln" id="L118" href="#L118">118</a>
+<a class="ln" id="L119" href="#L119">119</a><span class="kw">pub</span> <span class="kw">theorem</span> eq_of_difference&lt;K, a: K, b: K&gt;(
+<a class="ln" id="L120" href="#L120">120</a>  add: (K, K) -&gt; K,
+<a class="ln" id="L121" href="#L121">121</a>  zero: K,
+<a class="ln" id="L122" href="#L122">122</a>  neg: (K) -&gt; K,
+<a class="ln" id="L123" href="#L123">123</a>  mul: (K, K) -&gt; K,
+<a class="ln" id="L124" href="#L124">124</a>  one: K,
+<a class="ln" id="L125" href="#L125">125</a>  r: CommRing(K, add, zero, neg, mul, one),
+<a class="ln" id="L126" href="#L126">126</a>  h: add(a, neg(b)) = zero
+<a class="ln" id="L127" href="#L127">127</a>): a = b {
+<a class="ln" id="L128" href="#L128">128</a>  ring_eq_of_sub(add, zero, neg, mul, one, r, a, b, h)
+<a class="ln" id="L129" href="#L129">129</a>}
+<a class="ln" id="L130" href="#L130">130</a>
+<a class="ln" id="L131" href="#L131">131</a><span class="com">// Two vectors with the same coordinates have the same squared length.</span>
+<a class="ln" id="L132" href="#L132">132</a><span class="kw">pub</span> <span class="kw">theorem</span> same_length&lt;K, p1: K, p2: K, u1: K, u2: K&gt;(
+<a class="ln" id="L133" href="#L133">133</a>  add: (K, K) -&gt; K,
+<a class="ln" id="L134" href="#L134">134</a>  mul: (K, K) -&gt; K,
+<a class="ln" id="L135" href="#L135">135</a>  h1: p1 = u1,
+<a class="ln" id="L136" href="#L136">136</a>  h2: p2 = u2
+<a class="ln" id="L137" href="#L137">137</a>): add(mul(u1, u1), mul(u2, u2)) = add(mul(p1, p1), mul(p2, p2)) {
+<a class="ln" id="L138" href="#L138">138</a>  Eq::sym(
+<a class="ln" id="L139" href="#L139">139</a>    Eq::trans(
+<a class="ln" id="L140" href="#L140">140</a>      Eq::congr((z: K) =&gt; add(mul(z, z), mul(p2, p2)), h1),
+<a class="ln" id="L141" href="#L141">141</a>      Eq::congr((z: K) =&gt; add(mul(u1, u1), mul(z, z)), h2)
+<a class="ln" id="L142" href="#L142">142</a>    )
+<a class="ln" id="L143" href="#L143">143</a>  )
+<a class="ln" id="L144" href="#L144">144</a>}
+<a class="ln" id="L145" href="#L145">145</a>
+<a class="ln" id="L146" href="#L146">146</a><span class="com">// A quadrilateral ABCD with AB ∥ DC and AD ∥ BC, where A, B, D are not on a</span>
+<a class="ln" id="L147" href="#L147">147</a><span class="com">// line, has its opposite sides of the same length: a parallelogram. In the</span>
+<a class="ln" id="L148" href="#L148">148</a><span class="com">// plane over any integral domain; lengths are squared, as a ring has no roots.</span>
+<a class="ln" id="L149" href="#L149">149</a><span class="kw">pub</span> <span class="kw">theorem</span> parallelogram_opposite_sides&lt;K&gt;(
+<a class="ln" id="L150" href="#L150">150</a>  add: (K, K) -&gt; K,
+<a class="ln" id="L151" href="#L151">151</a>  zero: K,
+<a class="ln" id="L152" href="#L152">152</a>  neg: (K) -&gt; K,
+<a class="ln" id="L153" href="#L153">153</a>  mul: (K, K) -&gt; K,
+<a class="ln" id="L154" href="#L154">154</a>  one: K,
+<a class="ln" id="L155" href="#L155">155</a>  d: IntegralDomain(K, add, zero, neg, mul, one),
+<a class="ln" id="L156" href="#L156">156</a>  A: <a href="../src/point.taut.html#L4">Point</a>(K),
+<a class="ln" id="L157" href="#L157">157</a>  B: <a href="../src/point.taut.html#L4">Point</a>(K),
+<a class="ln" id="L158" href="#L158">158</a>  C: <a href="../src/point.taut.html#L4">Point</a>(K),
+<a class="ln" id="L159" href="#L159">159</a>  D: <a href="../src/point.taut.html#L4">Point</a>(K),
+<a class="ln" id="L160" href="#L160">160</a>  ab_dc: <span class="mac">geo!</span>(`add, zero, neg, mul, one; AB ∥ DC`),
+<a class="ln" id="L161" href="#L161">161</a>  ad_bc: <span class="mac">geo!</span>(`add, zero, neg, mul, one; AD ∥ BC`),
+<a class="ln" id="L162" href="#L162">162</a>  proper: <span class="mac">geo!</span>(`add, zero, neg, mul, one; ¬(AB ∥ AD)`)
+<a class="ln" id="L163" href="#L163">163</a>): <span class="mac">geo!</span>(`add, zero, neg, mul, one; AB ≅ DC ∧ AD ≅ BC`) {
+<a class="ln" id="L164" href="#L164">164</a>  <span class="kw">let</span> r := domain_ring(add, zero, neg, mul, one, d)
+<a class="ln" id="L165" href="#L165">165</a>  <span class="com">// (C - D) - (B - A) = 0, each coordinate.</span>
+<a class="ln" id="L166" href="#L166">166</a>  <span class="kw">let</span> ex := <a href="#L66">cancel_combination</a>(
+<a class="ln" id="L167" href="#L167">167</a>    add,
+<a class="ln" id="L168" href="#L168">168</a>    zero,
+<a class="ln" id="L169" href="#L169">169</a>    neg,
+<a class="ln" id="L170" href="#L170">170</a>    mul,
+<a class="ln" id="L171" href="#L171">171</a>    one,
+<a class="ln" id="L172" href="#L172">172</a>    d,
+<a class="ln" id="L173" href="#L173">173</a>    proper,
+<a class="ln" id="L174" href="#L174">174</a>    <a href="#L15">parallelogram_key_x</a>(add, zero, neg, mul, one, r, A, B, C, D),
+<a class="ln" id="L175" href="#L175">175</a>    ab_dc,
+<a class="ln" id="L176" href="#L176">176</a>    ad_bc
+<a class="ln" id="L177" href="#L177">177</a>  )
+<a class="ln" id="L178" href="#L178">178</a>  <span class="kw">let</span> ey := <a href="#L66">cancel_combination</a>(
+<a class="ln" id="L179" href="#L179">179</a>    add,
+<a class="ln" id="L180" href="#L180">180</a>    zero,
+<a class="ln" id="L181" href="#L181">181</a>    neg,
+<a class="ln" id="L182" href="#L182">182</a>    mul,
+<a class="ln" id="L183" href="#L183">183</a>    one,
+<a class="ln" id="L184" href="#L184">184</a>    d,
+<a class="ln" id="L185" href="#L185">185</a>    proper,
+<a class="ln" id="L186" href="#L186">186</a>    <a href="#L40">parallelogram_key_y</a>(add, zero, neg, mul, one, r, A, B, C, D),
+<a class="ln" id="L187" href="#L187">187</a>    ab_dc,
+<a class="ln" id="L188" href="#L188">188</a>    ad_bc
+<a class="ln" id="L189" href="#L189">189</a>  )
+<a class="ln" id="L190" href="#L190">190</a>  <span class="com">// So also (C - B) - (D - A) = 0.</span>
+<a class="ln" id="L191" href="#L191">191</a>  <span class="kw">let</span> fx := Eq::trans(<a href="#L104">swap_differences</a>(add, zero, neg, mul, one, r, <a href="../src/point.taut.html#L8">px</a>(A), <a href="../src/point.taut.html#L8">px</a>(B), <a href="../src/point.taut.html#L8">px</a>(C), <a href="../src/point.taut.html#L8">px</a>(D)), ex)
+<a class="ln" id="L192" href="#L192">192</a>  <span class="kw">let</span> fy := Eq::trans(<a href="#L104">swap_differences</a>(add, zero, neg, mul, one, r, <a href="../src/point.taut.html#L12">py</a>(A), <a href="../src/point.taut.html#L12">py</a>(B), <a href="../src/point.taut.html#L12">py</a>(C), <a href="../src/point.taut.html#L12">py</a>(D)), ey)
+<a class="ln" id="L193" href="#L193">193</a>  AndIntro(
+<a class="ln" id="L194" href="#L194">194</a>    <a href="#L132">same_length</a>(
+<a class="ln" id="L195" href="#L195">195</a>      add,
+<a class="ln" id="L196" href="#L196">196</a>      mul,
+<a class="ln" id="L197" href="#L197">197</a>      <a href="#L119">eq_of_difference</a>(add, zero, neg, mul, one, r, ex),
+<a class="ln" id="L198" href="#L198">198</a>      <a href="#L119">eq_of_difference</a>(add, zero, neg, mul, one, r, ey)
+<a class="ln" id="L199" href="#L199">199</a>    ),
+<a class="ln" id="L200" href="#L200">200</a>    <a href="#L132">same_length</a>(
+<a class="ln" id="L201" href="#L201">201</a>      add,
+<a class="ln" id="L202" href="#L202">202</a>      mul,
+<a class="ln" id="L203" href="#L203">203</a>      <a href="#L119">eq_of_difference</a>(add, zero, neg, mul, one, r, fx),
+<a class="ln" id="L204" href="#L204">204</a>      <a href="#L119">eq_of_difference</a>(add, zero, neg, mul, one, r, fy)
+<a class="ln" id="L205" href="#L205">205</a>    )
+<a class="ln" id="L206" href="#L206">206</a>  )
+<a class="ln" id="L207" href="#L207">207</a>}
+</code></pre>
+</html>

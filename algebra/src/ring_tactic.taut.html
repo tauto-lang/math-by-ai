@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/ring_tactic.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/ring_tactic.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::Base
+<a class="ln" id="L2" href="#L2">2</a><span class="kw">import</span> std::prelude::Macro { Judgement, ProofStep, Syn, SynExpr, SynSpan, Elab, elab, macro_error }
+<a class="ln" id="L3" href="#L3">3</a><span class="kw">import</span> std::Rewrite { Tac }
+<a class="ln" id="L4" href="#L4">4</a><span class="kw">import</span> <span class="str">&quot;ring_norm.taut&quot;</span>
+<a class="ln" id="L5" href="#L5">5</a>
+<a class="ln" id="L6" href="#L6">6</a><span class="com">// The operations of a ring, as the checker writes them.</span>
+<a class="ln" id="L7" href="#L7">7</a><span class="kw">pub(open)</span> <span class="kw">struct</span> RingOps { add: SynExpr, zero: SynExpr, neg: SynExpr, mul: SynExpr, one: SynExpr }
+<a class="ln" id="L8" href="#L8">8</a>
+<a class="ln" id="L9" href="#L9">9</a><span class="kw">module</span> RingTac {
+<a class="ln" id="L10" href="#L10">10</a>  <span class="com">// Where `e` is among the variables met so far.</span>
+<a class="ln" id="L11" href="#L11">11</a>  <span class="kw">pub</span> <span class="kw">fn</span> index(vars: List(SynExpr), e: SynExpr, i: u64): Option(u64) ! {Div} {
+<a class="ln" id="L12" href="#L12">12</a>    <span class="kw">match</span> vars {
+<a class="ln" id="L13" href="#L13">13</a>      Nil =&gt; None
+<a class="ln" id="L14" href="#L14">14</a>      Cons(v, rest) =&gt; <span class="kw">if</span> Syn::same(v, e) { Some(i) } <span class="kw">else</span> { <a href="#L11">RingTac::index</a>(rest, e, i + <span class="num">1</span>) }
+<a class="ln" id="L15" href="#L15">15</a>    }
+<a class="ln" id="L16" href="#L16">16</a>  }
+<a class="ln" id="L17" href="#L17">17</a>
+<a class="ln" id="L18" href="#L18">18</a>  <span class="kw">pub</span> <span class="kw">fn</span> length(vars: List(SynExpr)): u64 ! {Div} {
+<a class="ln" id="L19" href="#L19">19</a>    <span class="kw">match</span> vars {
+<a class="ln" id="L20" href="#L20">20</a>      Nil =&gt; <span class="num">0</span>
+<a class="ln" id="L21" href="#L21">21</a>      Cons(_, rest) =&gt; <span class="num">1</span> + <a href="#L18">RingTac::length</a>(rest)
+<a class="ln" id="L22" href="#L22">22</a>    }
+<a class="ln" id="L23" href="#L23">23</a>  }
+<a class="ln" id="L24" href="#L24">24</a>
+<a class="ln" id="L25" href="#L25">25</a>  <span class="kw">pub</span> <span class="kw">fn</span> snoc(vars: List(SynExpr), e: SynExpr): List(SynExpr) ! {Div} {
+<a class="ln" id="L26" href="#L26">26</a>    <span class="kw">match</span> vars {
+<a class="ln" id="L27" href="#L27">27</a>      Nil =&gt; Cons(e, Nil)
+<a class="ln" id="L28" href="#L28">28</a>      Cons(v, rest) =&gt; Cons(v, <a href="#L25">RingTac::snoc</a>(rest, e))
+<a class="ln" id="L29" href="#L29">29</a>    }
+<a class="ln" id="L30" href="#L30">30</a>  }
+<a class="ln" id="L31" href="#L31">31</a>
+<a class="ln" id="L32" href="#L32">32</a>  <span class="com">// `e` as a variable: its place, after the ones met so far when it is new.</span>
+<a class="ln" id="L33" href="#L33">33</a>  <span class="kw">pub</span> <span class="kw">fn</span> variable(e: SynExpr, vars: List(SynExpr), at: SynSpan): SynExpr × List(SynExpr) ! {Div} {
+<a class="ln" id="L34" href="#L34">34</a>    <span class="kw">match</span> <a href="#L11">RingTac::index</a>(vars, e, <span class="num">0</span>) {
+<a class="ln" id="L35" href="#L35">35</a>      Some(i) =&gt; {
+<a class="ln" id="L36" href="#L36">36</a>        <span class="kw">let</span> k := ExNat(Text::of_u64(i), at)
+<a class="ln" id="L37" href="#L37">37</a>        #(<span class="kw">quote</span> { ReVar($k) }, vars)
+<a class="ln" id="L38" href="#L38">38</a>      }
+<a class="ln" id="L39" href="#L39">39</a>      None =&gt; {
+<a class="ln" id="L40" href="#L40">40</a>        <span class="kw">let</span> k := ExNat(Text::of_u64(RingTac::length(vars)), at)
+<a class="ln" id="L41" href="#L41">41</a>        #(<span class="kw">quote</span> { ReVar($k) }, RingTac::snoc(vars, e))
+<a class="ln" id="L42" href="#L42">42</a>      }
+<a class="ln" id="L43" href="#L43">43</a>    }
+<a class="ln" id="L44" href="#L44">44</a>  }
+<a class="ln" id="L45" href="#L45">45</a>
+<a class="ln" id="L46" href="#L46">46</a>  <span class="kw">pub</span> <span class="kw">fn</span> two(
+<a class="ln" id="L47" href="#L47">47</a>    ops: <a href="#L7">RingOps</a>,
+<a class="ln" id="L48" href="#L48">48</a>    c: SynExpr,
+<a class="ln" id="L49" href="#L49">49</a>    a: SynExpr,
+<a class="ln" id="L50" href="#L50">50</a>    b: SynExpr,
+<a class="ln" id="L51" href="#L51">51</a>    vars: List(SynExpr),
+<a class="ln" id="L52" href="#L52">52</a>    at: SynSpan
+<a class="ln" id="L53" href="#L53">53</a>  ): SynExpr × List(SynExpr) ! {Div} {
+<a class="ln" id="L54" href="#L54">54</a>    <span class="kw">let</span> x := <a href="#L63">RingTac::read</a>(ops, a, vars, at)
+<a class="ln" id="L55" href="#L55">55</a>    <span class="kw">let</span> y := <a href="#L63">RingTac::read</a>(ops, b, (x: List(SynExpr)), at)
+<a class="ln" id="L56" href="#L56">56</a>    <span class="kw">let</span> u := (x: SynExpr)
+<a class="ln" id="L57" href="#L57">57</a>    <span class="kw">let</span> v := (y: SynExpr)
+<a class="ln" id="L58" href="#L58">58</a>    #(<span class="kw">quote</span> { $c($u, $v) }, (y: List(SynExpr)))
+<a class="ln" id="L59" href="#L59">59</a>  }
+<a class="ln" id="L60" href="#L60">60</a>
+<a class="ln" id="L61" href="#L61">61</a>  <span class="com">// The `RingExpr` of `e`: the ring's operations and constants, and anything</span>
+<a class="ln" id="L62" href="#L62">62</a>  <span class="com">// else a variable.</span>
+<a class="ln" id="L63" href="#L63">63</a>  <span class="kw">pub</span> <span class="kw">fn</span> read(
+<a class="ln" id="L64" href="#L64">64</a>    ops: <a href="#L7">RingOps</a>,
+<a class="ln" id="L65" href="#L65">65</a>    e: SynExpr,
+<a class="ln" id="L66" href="#L66">66</a>    vars: List(SynExpr),
+<a class="ln" id="L67" href="#L67">67</a>    at: SynSpan
+<a class="ln" id="L68" href="#L68">68</a>  ): SynExpr × List(SynExpr) ! {Div} {
+<a class="ln" id="L69" href="#L69">69</a>    <span class="kw">if</span> Syn::same(e, ops.zero) {
+<a class="ln" id="L70" href="#L70">70</a>      #(<span class="kw">quote</span> { ReZero }, vars)
+<a class="ln" id="L71" href="#L71">71</a>    } <span class="kw">else</span> <span class="kw">if</span> Syn::same(e, ops.one) {
+<a class="ln" id="L72" href="#L72">72</a>      #(<span class="kw">quote</span> { ReOne }, vars)
+<a class="ln" id="L73" href="#L73">73</a>    } <span class="kw">else</span> {
+<a class="ln" id="L74" href="#L74">74</a>      <span class="kw">match</span> Syn::app_parts(e) {
+<a class="ln" id="L75" href="#L75">75</a>        None =&gt; <a href="#L33">RingTac::variable</a>(e, vars, at)
+<a class="ln" id="L76" href="#L76">76</a>        Some(p) =&gt; {
+<a class="ln" id="L77" href="#L77">77</a>          <span class="kw">let</span> f := (p: SynExpr)
+<a class="ln" id="L78" href="#L78">78</a>          <span class="kw">match</span> (p: List(SynExpr)) {
+<a class="ln" id="L79" href="#L79">79</a>            Nil =&gt; RingTac::variable(e, vars, at)
+<a class="ln" id="L80" href="#L80">80</a>            Cons(a, rest) =&gt; <span class="kw">match</span> rest {
+<a class="ln" id="L81" href="#L81">81</a>              Nil =&gt; <span class="kw">if</span> Syn::same(f, ops.neg) {
+<a class="ln" id="L82" href="#L82">82</a>                <span class="kw">let</span> x := RingTac::read(ops, a, vars, at)
+<a class="ln" id="L83" href="#L83">83</a>                <span class="kw">let</span> u := (x: SynExpr)
+<a class="ln" id="L84" href="#L84">84</a>                #(<span class="kw">quote</span> { ReNeg($u) }, (x: List(SynExpr)))
+<a class="ln" id="L85" href="#L85">85</a>              } <span class="kw">else</span> {
+<a class="ln" id="L86" href="#L86">86</a>                RingTac::variable(e, vars, at)
+<a class="ln" id="L87" href="#L87">87</a>              }
+<a class="ln" id="L88" href="#L88">88</a>              Cons(b, more) =&gt; <span class="kw">match</span> more {
+<a class="ln" id="L89" href="#L89">89</a>                Nil =&gt; <span class="kw">if</span> Syn::same(f, ops.add) {
+<a class="ln" id="L90" href="#L90">90</a>                  RingTac::two(ops, <span class="kw">quote</span> { ReAdd }, a, b, vars, at)
+<a class="ln" id="L91" href="#L91">91</a>                } <span class="kw">else</span> <span class="kw">if</span> Syn::same(f, ops.mul) {
+<a class="ln" id="L92" href="#L92">92</a>                  RingTac::two(ops, <span class="kw">quote</span> { ReMul }, a, b, vars, at)
+<a class="ln" id="L93" href="#L93">93</a>                } <span class="kw">else</span> {
+<a class="ln" id="L94" href="#L94">94</a>                  RingTac::variable(e, vars, at)
+<a class="ln" id="L95" href="#L95">95</a>                }
+<a class="ln" id="L96" href="#L96">96</a>                Cons(_, _) =&gt; RingTac::variable(e, vars, at)
+<a class="ln" id="L97" href="#L97">97</a>              }
+<a class="ln" id="L98" href="#L98">98</a>            }
+<a class="ln" id="L99" href="#L99">99</a>          }
+<a class="ln" id="L100" href="#L100">100</a>        }
+<a class="ln" id="L101" href="#L101">101</a>      }
+<a class="ln" id="L102" href="#L102">102</a>    }
+<a class="ln" id="L103" href="#L103">103</a>  }
+<a class="ln" id="L104" href="#L104">104</a>
+<a class="ln" id="L105" href="#L105">105</a>  <span class="kw">pub</span> <span class="kw">fn</span> list(vars: List(SynExpr)): SynExpr ! {Div} {
+<a class="ln" id="L106" href="#L106">106</a>    <span class="kw">match</span> vars {
+<a class="ln" id="L107" href="#L107">107</a>      Nil =&gt; <span class="kw">quote</span> { Nil }
+<a class="ln" id="L108" href="#L108">108</a>      Cons(v, rest) =&gt; {
+<a class="ln" id="L109" href="#L109">109</a>        <span class="kw">let</span> tail := RingTac::list(rest)
+<a class="ln" id="L110" href="#L110">110</a>        <span class="kw">quote</span> { Cons($v, $tail) }
+<a class="ln" id="L111" href="#L111">111</a>      }
+<a class="ln" id="L112" href="#L112">112</a>    }
+<a class="ln" id="L113" href="#L113">113</a>  }
+<a class="ln" id="L114" href="#L114">114</a>
+<a class="ln" id="L115" href="#L115">115</a>  <span class="com">// The operations from the type of the proof that the structure is a ring,</span>
+<a class="ln" id="L116" href="#L116">116</a>  <span class="com">// `CommRing(A, add, zero, neg, mul, one)`.</span>
+<a class="ln" id="L117" href="#L117">117</a>  <span class="kw">pub</span> <span class="kw">fn</span> ops(ty: SynExpr): Option(<a href="#L7">RingOps</a>) {
+<a class="ln" id="L118" href="#L118">118</a>    <span class="kw">match</span> Syn::app_parts(ty) {
+<a class="ln" id="L119" href="#L119">119</a>      None =&gt; None
+<a class="ln" id="L120" href="#L120">120</a>      Some(p) =&gt; <span class="kw">match</span> (p: List(SynExpr)) {
+<a class="ln" id="L121" href="#L121">121</a>        Cons(_, Cons(add, Cons(zero, Cons(neg, Cons(mul, Cons(one, Nil)))))) =&gt; Some(
+<a class="ln" id="L122" href="#L122">122</a>          RingOps { add: add, zero: zero, neg: neg, mul: mul, one: one }
+<a class="ln" id="L123" href="#L123">123</a>        )
+<a class="ln" id="L124" href="#L124">124</a>        _ =&gt; None
+<a class="ln" id="L125" href="#L125">125</a>      }
+<a class="ln" id="L126" href="#L126">126</a>    }
+<a class="ln" id="L127" href="#L127">127</a>  }
+<a class="ln" id="L128" href="#L128">128</a>}
+<a class="ln" id="L129" href="#L129">129</a>
+<a class="ln" id="L130" href="#L130">130</a><span class="com">// `ring_norm!(r)`, for a goal `l = r` in a commutative ring: `r` proves</span>
+<a class="ln" id="L131" href="#L131">131</a><span class="com">// `CommRing(A, add, zero, neg, mul, one)`, and the sides are made of those</span>
+<a class="ln" id="L132" href="#L132">132</a><span class="com">// operations and anything else (a variable of the equation). Reflection: the</span>
+<a class="ln" id="L133" href="#L133">133</a><span class="com">// term is `ring_norm_eq(…, Refl)`, whose `Refl` the kernel accepts only when</span>
+<a class="ln" id="L134" href="#L134">134</a><span class="com">// `l + -r` normalises to no term. No goal is left: write no arm.</span>
+<a class="ln" id="L135" href="#L135">135</a><span class="kw">pub</span> <span class="kw">macro</span> <span class="kw">fn</span> ring_norm(s: ProofStep): SynExpr ! {macro_error, elab, Div} {
+<a class="ln" id="L136" href="#L136">136</a>  <span class="kw">match</span> s.after {
+<a class="ln" id="L137" href="#L137">137</a>    Cons(_, _) =&gt; Syn::error(s.span, <span class="str">&quot;ring_norm! leaves no goal: write no arm&quot;</span>)
+<a class="ln" id="L138" href="#L138">138</a>    Nil =&gt; <span class="kw">match</span> Elab::check(s.arg, s.before, None) {
+<a class="ln" id="L139" href="#L139">139</a>      Err(d) =&gt; Syn::error(s.span, d.message)
+<a class="ln" id="L140" href="#L140">140</a>      Ok(j) =&gt; <span class="kw">match</span> <a href="#L117">RingTac::ops</a>(Judgement::term(Judgement::type_of(j))) {
+<a class="ln" id="L141" href="#L141">141</a>        None =&gt; Syn::error(
+<a class="ln" id="L142" href="#L142">142</a>          s.span,
+<a class="ln" id="L143" href="#L143">143</a>          <span class="str">&quot;ring_norm!: the argument does not prove CommRing(A, add, zero, neg, mul, one)&quot;</span>
+<a class="ln" id="L144" href="#L144">144</a>        )
+<a class="ln" id="L145" href="#L145">145</a>        Some(ops) =&gt; <span class="kw">match</span> Tac::eq_goal(s.before) {
+<a class="ln" id="L146" href="#L146">146</a>          None =&gt; Syn::error(s.span, <span class="str">&quot;ring_norm!: the goal is not an equation&quot;</span>)
+<a class="ln" id="L147" href="#L147">147</a>          Some(#(@lhs l, @rhs r, @ty ty)) =&gt; {
+<a class="ln" id="L148" href="#L148">148</a>            <span class="kw">let</span> at := s.span
+<a class="ln" id="L149" href="#L149">149</a>            <span class="kw">let</span> x := RingTac::read(ops, l, Nil, at)
+<a class="ln" id="L150" href="#L150">150</a>            <span class="kw">let</span> y := RingTac::read(ops, r, (x: List(SynExpr)), at)
+<a class="ln" id="L151" href="#L151">151</a>            <span class="kw">let</span> env := RingTac::list((y: List(SynExpr)))
+<a class="ln" id="L152" href="#L152">152</a>            <span class="kw">let</span> a := (x: SynExpr)
+<a class="ln" id="L153" href="#L153">153</a>            <span class="kw">let</span> b := (y: SynExpr)
+<a class="ln" id="L154" href="#L154">154</a>            <span class="kw">let</span> add := ops.add
+<a class="ln" id="L155" href="#L155">155</a>            <span class="kw">let</span> zero := ops.zero
+<a class="ln" id="L156" href="#L156">156</a>            <span class="kw">let</span> neg := ops.neg
+<a class="ln" id="L157" href="#L157">157</a>            <span class="kw">let</span> mul := ops.mul
+<a class="ln" id="L158" href="#L158">158</a>            <span class="kw">let</span> one := ops.one
+<a class="ln" id="L159" href="#L159">159</a>            <span class="kw">let</span> proof := s.arg
+<a class="ln" id="L160" href="#L160">160</a>            <span class="kw">quote</span> { ring_norm_eq($add, $zero, $neg, $mul, $one, $proof, $env, $a, $b, Refl) }
+<a class="ln" id="L161" href="#L161">161</a>          }
+<a class="ln" id="L162" href="#L162">162</a>        }
+<a class="ln" id="L163" href="#L163">163</a>      }
+<a class="ln" id="L164" href="#L164">164</a>    }
+<a class="ln" id="L165" href="#L165">165</a>  }
+<a class="ln" id="L166" href="#L166">166</a>}
+</code></pre>
+</html>

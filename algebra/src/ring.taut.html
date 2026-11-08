@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/ring.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/ring.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::Base
+<a class="ln" id="L2" href="#L2">2</a><span class="kw">import</span> <span class="str">&quot;monoid.taut&quot;</span>
+<a class="ln" id="L3" href="#L3">3</a><span class="kw">import</span> <span class="str">&quot;commutative.taut&quot;</span>
+<a class="ln" id="L4" href="#L4">4</a><span class="kw">import</span> <span class="str">&quot;group.taut&quot;</span>
+<a class="ln" id="L5" href="#L5">5</a>
+<a class="ln" id="L6" href="#L6">6</a><span class="com">// A commutative ring: an abelian group under `add`, a commutative monoid under</span>
+<a class="ln" id="L7" href="#L7">7</a><span class="com">// `mul`, and `mul` distributing over `add`. The other laws (`a * 0 = 0`,</span>
+<a class="ln" id="L8" href="#L8">8</a><span class="com">// `(-a) * b = -(a * b)`, distribution on the right) follow; they are below.</span>
+<a class="ln" id="L9" href="#L9">9</a><span class="kw">pub(open)</span> <span class="kw">inductive</span> CommRing(
+<a class="ln" id="L10" href="#L10">10</a>  A: Type,
+<a class="ln" id="L11" href="#L11">11</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L12" href="#L12">12</a>  zero: A,
+<a class="ln" id="L13" href="#L13">13</a>  neg: (A) -&gt; A,
+<a class="ln" id="L14" href="#L14">14</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L15" href="#L15">15</a>  one: A
+<a class="ln" id="L16" href="#L16">16</a>): Prop {
+<a class="ln" id="L17" href="#L17">17</a>  Mk(
+<a class="ln" id="L18" href="#L18">18</a>    additive: <a href="../src/group.taut.html#L10">Group</a>(A, add, zero, neg),
+<a class="ln" id="L19" href="#L19">19</a>    add_comm: (a: A, b: A) -&gt; add(a, b) = add(b, a),
+<a class="ln" id="L20" href="#L20">20</a>    multiplicative: <a href="../src/monoid.taut.html#L9">Monoid</a>(A, mul, one),
+<a class="ln" id="L21" href="#L21">21</a>    mul_comm: (a: A, b: A) -&gt; mul(a, b) = mul(b, a),
+<a class="ln" id="L22" href="#L22">22</a>    distrib: (a: A, b: A, c: A) -&gt; mul(a, add(b, c)) = add(mul(a, b), mul(a, c))
+<a class="ln" id="L23" href="#L23">23</a>  ): <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one)
+<a class="ln" id="L24" href="#L24">24</a>}
+<a class="ln" id="L25" href="#L25">25</a>
+<a class="ln" id="L26" href="#L26">26</a><span class="com">// A commutative ring where `1 ≠ 0` and a product is 0 only when a factor is.</span>
+<a class="ln" id="L27" href="#L27">27</a><span class="kw">pub(open)</span> <span class="kw">inductive</span> IntegralDomain(
+<a class="ln" id="L28" href="#L28">28</a>  A: Type,
+<a class="ln" id="L29" href="#L29">29</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L30" href="#L30">30</a>  zero: A,
+<a class="ln" id="L31" href="#L31">31</a>  neg: (A) -&gt; A,
+<a class="ln" id="L32" href="#L32">32</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L33" href="#L33">33</a>  one: A
+<a class="ln" id="L34" href="#L34">34</a>): Prop {
+<a class="ln" id="L35" href="#L35">35</a>  Mk(
+<a class="ln" id="L36" href="#L36">36</a>    ring: <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one),
+<a class="ln" id="L37" href="#L37">37</a>    nontrivial: (one = zero) -&gt; False,
+<a class="ln" id="L38" href="#L38">38</a>    no_zero_divisors: (a: A, b: A, h: mul(a, b) = zero) -&gt; a = zero ∨ b = zero
+<a class="ln" id="L39" href="#L39">39</a>  ): <a href="#L27">IntegralDomain</a>(A, add, zero, neg, mul, one)
+<a class="ln" id="L40" href="#L40">40</a>}
+<a class="ln" id="L41" href="#L41">41</a>
+<a class="ln" id="L42" href="#L42">42</a><span class="kw">pub</span> <span class="kw">theorem</span> domain_ring&lt;A&gt;(
+<a class="ln" id="L43" href="#L43">43</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L44" href="#L44">44</a>  zero: A,
+<a class="ln" id="L45" href="#L45">45</a>  neg: (A) -&gt; A,
+<a class="ln" id="L46" href="#L46">46</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L47" href="#L47">47</a>  one: A,
+<a class="ln" id="L48" href="#L48">48</a>  d: <a href="#L27">IntegralDomain</a>(A, add, zero, neg, mul, one)
+<a class="ln" id="L49" href="#L49">49</a>): <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one) {
+<a class="ln" id="L50" href="#L50">50</a>  ⊢ CommRing(A, add, zero, neg, mul, one) <span class="kw">from</span> <span class="kw">match</span> d { Mk(r, n, z) =&gt; r }
+<a class="ln" id="L51" href="#L51">51</a>}
+<a class="ln" id="L52" href="#L52">52</a><span class="kw">pub</span> <span class="kw">theorem</span> domain_nontrivial&lt;A&gt;(
+<a class="ln" id="L53" href="#L53">53</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L54" href="#L54">54</a>  zero: A,
+<a class="ln" id="L55" href="#L55">55</a>  neg: (A) -&gt; A,
+<a class="ln" id="L56" href="#L56">56</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L57" href="#L57">57</a>  one: A,
+<a class="ln" id="L58" href="#L58">58</a>  d: <a href="#L27">IntegralDomain</a>(A, add, zero, neg, mul, one)
+<a class="ln" id="L59" href="#L59">59</a>): (one = zero) -&gt; False {
+<a class="ln" id="L60" href="#L60">60</a>  ⊢ (one = zero) -&gt; False <span class="kw">from</span> <span class="kw">match</span> d { Mk(r, n, z) =&gt; n }
+<a class="ln" id="L61" href="#L61">61</a>}
+<a class="ln" id="L62" href="#L62">62</a><span class="kw">pub</span> <span class="kw">theorem</span> domain_no_zero_divisors&lt;A&gt;(
+<a class="ln" id="L63" href="#L63">63</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L64" href="#L64">64</a>  zero: A,
+<a class="ln" id="L65" href="#L65">65</a>  neg: (A) -&gt; A,
+<a class="ln" id="L66" href="#L66">66</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L67" href="#L67">67</a>  one: A,
+<a class="ln" id="L68" href="#L68">68</a>  d: <a href="#L27">IntegralDomain</a>(A, add, zero, neg, mul, one),
+<a class="ln" id="L69" href="#L69">69</a>  a: A,
+<a class="ln" id="L70" href="#L70">70</a>  b: A,
+<a class="ln" id="L71" href="#L71">71</a>  h: mul(a, b) = zero
+<a class="ln" id="L72" href="#L72">72</a>): a = zero ∨ b = zero {
+<a class="ln" id="L73" href="#L73">73</a>  ⊢ a = zero ∨ b = zero <span class="kw">from</span> <span class="kw">match</span> d { Mk(r, n, z) =&gt; z(a, b, h) }
+<a class="ln" id="L74" href="#L74">74</a>}
+<a class="ln" id="L75" href="#L75">75</a>
+<a class="ln" id="L76" href="#L76">76</a><span class="kw">pub</span> <span class="kw">theorem</span> ring_group&lt;A&gt;(
+<a class="ln" id="L77" href="#L77">77</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L78" href="#L78">78</a>  zero: A,
+<a class="ln" id="L79" href="#L79">79</a>  neg: (A) -&gt; A,
+<a class="ln" id="L80" href="#L80">80</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L81" href="#L81">81</a>  one: A,
+<a class="ln" id="L82" href="#L82">82</a>  r: <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one)
+<a class="ln" id="L83" href="#L83">83</a>): <a href="../src/group.taut.html#L10">Group</a>(A, add, zero, neg) {
+<a class="ln" id="L84" href="#L84">84</a>  ⊢ Group(A, add, zero, neg) <span class="kw">from</span> <span class="kw">match</span> r { Mk(g, ac, m, mc, d) =&gt; g }
+<a class="ln" id="L85" href="#L85">85</a>}
+<a class="ln" id="L86" href="#L86">86</a><span class="kw">pub</span> <span class="kw">theorem</span> ring_add_comm&lt;A&gt;(
+<a class="ln" id="L87" href="#L87">87</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L88" href="#L88">88</a>  zero: A,
+<a class="ln" id="L89" href="#L89">89</a>  neg: (A) -&gt; A,
+<a class="ln" id="L90" href="#L90">90</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L91" href="#L91">91</a>  one: A,
+<a class="ln" id="L92" href="#L92">92</a>  r: <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one),
+<a class="ln" id="L93" href="#L93">93</a>  a: A,
+<a class="ln" id="L94" href="#L94">94</a>  b: A
+<a class="ln" id="L95" href="#L95">95</a>): add(a, b) = add(b, a) {
+<a class="ln" id="L96" href="#L96">96</a>  ⊢ add(a, b) = add(b, a) <span class="kw">from</span> <span class="kw">match</span> r { Mk(g, ac, m, mc, d) =&gt; ac(a, b) }
+<a class="ln" id="L97" href="#L97">97</a>}
+<a class="ln" id="L98" href="#L98">98</a><span class="kw">pub</span> <span class="kw">theorem</span> ring_mul_monoid&lt;A&gt;(
+<a class="ln" id="L99" href="#L99">99</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L100" href="#L100">100</a>  zero: A,
+<a class="ln" id="L101" href="#L101">101</a>  neg: (A) -&gt; A,
+<a class="ln" id="L102" href="#L102">102</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L103" href="#L103">103</a>  one: A,
+<a class="ln" id="L104" href="#L104">104</a>  r: <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one)
+<a class="ln" id="L105" href="#L105">105</a>): <a href="../src/monoid.taut.html#L9">Monoid</a>(A, mul, one) {
+<a class="ln" id="L106" href="#L106">106</a>  ⊢ Monoid(A, mul, one) <span class="kw">from</span> <span class="kw">match</span> r { Mk(g, ac, m, mc, d) =&gt; m }
+<a class="ln" id="L107" href="#L107">107</a>}
+<a class="ln" id="L108" href="#L108">108</a><span class="kw">pub</span> <span class="kw">theorem</span> ring_mul_comm&lt;A&gt;(
+<a class="ln" id="L109" href="#L109">109</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L110" href="#L110">110</a>  zero: A,
+<a class="ln" id="L111" href="#L111">111</a>  neg: (A) -&gt; A,
+<a class="ln" id="L112" href="#L112">112</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L113" href="#L113">113</a>  one: A,
+<a class="ln" id="L114" href="#L114">114</a>  r: <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one),
+<a class="ln" id="L115" href="#L115">115</a>  a: A,
+<a class="ln" id="L116" href="#L116">116</a>  b: A
+<a class="ln" id="L117" href="#L117">117</a>): mul(a, b) = mul(b, a) {
+<a class="ln" id="L118" href="#L118">118</a>  ⊢ mul(a, b) = mul(b, a) <span class="kw">from</span> <span class="kw">match</span> r { Mk(g, ac, m, mc, d) =&gt; mc(a, b) }
+<a class="ln" id="L119" href="#L119">119</a>}
+<a class="ln" id="L120" href="#L120">120</a><span class="kw">pub</span> <span class="kw">theorem</span> ring_distrib_left&lt;A&gt;(
+<a class="ln" id="L121" href="#L121">121</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L122" href="#L122">122</a>  zero: A,
+<a class="ln" id="L123" href="#L123">123</a>  neg: (A) -&gt; A,
+<a class="ln" id="L124" href="#L124">124</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L125" href="#L125">125</a>  one: A,
+<a class="ln" id="L126" href="#L126">126</a>  r: <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one),
+<a class="ln" id="L127" href="#L127">127</a>  a: A,
+<a class="ln" id="L128" href="#L128">128</a>  b: A,
+<a class="ln" id="L129" href="#L129">129</a>  c: A
+<a class="ln" id="L130" href="#L130">130</a>): mul(a, add(b, c)) = add(mul(a, b), mul(a, c)) {
+<a class="ln" id="L131" href="#L131">131</a>  ⊢ mul(a, add(b, c)) = add(mul(a, b), mul(a, c)) <span class="kw">from</span> <span class="kw">match</span> r { Mk(g, ac, m, mc, d) =&gt; d(a, b, c) }
+<a class="ln" id="L132" href="#L132">132</a>}
+<a class="ln" id="L133" href="#L133">133</a>
+<a class="ln" id="L134" href="#L134">134</a><span class="kw">pub</span> <span class="kw">theorem</span> ring_add_monoid&lt;A&gt;(
+<a class="ln" id="L135" href="#L135">135</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L136" href="#L136">136</a>  zero: A,
+<a class="ln" id="L137" href="#L137">137</a>  neg: (A) -&gt; A,
+<a class="ln" id="L138" href="#L138">138</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L139" href="#L139">139</a>  one: A,
+<a class="ln" id="L140" href="#L140">140</a>  r: <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one)
+<a class="ln" id="L141" href="#L141">141</a>): <a href="../src/monoid.taut.html#L9">Monoid</a>(A, add, zero) {
+<a class="ln" id="L142" href="#L142">142</a>  <a href="../src/group.taut.html#L17">group_monoid</a>(add, zero, neg, <a href="#L76">ring_group</a>(add, zero, neg, mul, one, r))
+<a class="ln" id="L143" href="#L143">143</a>}
+<a class="ln" id="L144" href="#L144">144</a><span class="kw">pub</span> <span class="kw">theorem</span> ring_add_comm_monoid&lt;A&gt;(
+<a class="ln" id="L145" href="#L145">145</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L146" href="#L146">146</a>  zero: A,
+<a class="ln" id="L147" href="#L147">147</a>  neg: (A) -&gt; A,
+<a class="ln" id="L148" href="#L148">148</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L149" href="#L149">149</a>  one: A,
+<a class="ln" id="L150" href="#L150">150</a>  r: <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one)
+<a class="ln" id="L151" href="#L151">151</a>): <a href="../src/commutative.taut.html#L9">CommMonoid</a>(A, add, zero) {
+<a class="ln" id="L152" href="#L152">152</a>  <a href="../src/commutative.taut.html#L10">CommMonoid::Mk</a>(
+<a class="ln" id="L153" href="#L153">153</a>    <a href="#L134">ring_add_monoid</a>(add, zero, neg, mul, one, r),
+<a class="ln" id="L154" href="#L154">154</a>    (a: A, b: A) =&gt; <a href="#L86">ring_add_comm</a>(add, zero, neg, mul, one, r, a, b)
+<a class="ln" id="L155" href="#L155">155</a>  )
+<a class="ln" id="L156" href="#L156">156</a>}
+<a class="ln" id="L157" href="#L157">157</a><span class="kw">pub</span> <span class="kw">theorem</span> ring_mul_comm_monoid&lt;A&gt;(
+<a class="ln" id="L158" href="#L158">158</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L159" href="#L159">159</a>  zero: A,
+<a class="ln" id="L160" href="#L160">160</a>  neg: (A) -&gt; A,
+<a class="ln" id="L161" href="#L161">161</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L162" href="#L162">162</a>  one: A,
+<a class="ln" id="L163" href="#L163">163</a>  r: <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one)
+<a class="ln" id="L164" href="#L164">164</a>): <a href="../src/commutative.taut.html#L9">CommMonoid</a>(A, mul, one) {
+<a class="ln" id="L165" href="#L165">165</a>  <a href="../src/commutative.taut.html#L10">CommMonoid::Mk</a>(
+<a class="ln" id="L166" href="#L166">166</a>    <a href="#L98">ring_mul_monoid</a>(add, zero, neg, mul, one, r),
+<a class="ln" id="L167" href="#L167">167</a>    (a: A, b: A) =&gt; <a href="#L108">ring_mul_comm</a>(add, zero, neg, mul, one, r, a, b)
+<a class="ln" id="L168" href="#L168">168</a>  )
+<a class="ln" id="L169" href="#L169">169</a>}
+<a class="ln" id="L170" href="#L170">170</a>
+<a class="ln" id="L171" href="#L171">171</a><span class="kw">pub</span> <span class="kw">theorem</span> ring_distrib_right&lt;A&gt;(
+<a class="ln" id="L172" href="#L172">172</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L173" href="#L173">173</a>  zero: A,
+<a class="ln" id="L174" href="#L174">174</a>  neg: (A) -&gt; A,
+<a class="ln" id="L175" href="#L175">175</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L176" href="#L176">176</a>  one: A,
+<a class="ln" id="L177" href="#L177">177</a>  r: <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one),
+<a class="ln" id="L178" href="#L178">178</a>  a: A,
+<a class="ln" id="L179" href="#L179">179</a>  b: A,
+<a class="ln" id="L180" href="#L180">180</a>  c: A
+<a class="ln" id="L181" href="#L181">181</a>): mul(add(a, b), c) = add(mul(a, c), mul(b, c)) {
+<a class="ln" id="L182" href="#L182">182</a>  Eq::trans(
+<a class="ln" id="L183" href="#L183">183</a>    <a href="#L108">ring_mul_comm</a>(add, zero, neg, mul, one, r, add(a, b), c),
+<a class="ln" id="L184" href="#L184">184</a>    Eq::trans(
+<a class="ln" id="L185" href="#L185">185</a>      <a href="#L120">ring_distrib_left</a>(add, zero, neg, mul, one, r, c, a, b),
+<a class="ln" id="L186" href="#L186">186</a>      Eq::trans(
+<a class="ln" id="L187" href="#L187">187</a>        Eq::congr(⟦add(□, mul(c, b))⟧, <a href="#L108">ring_mul_comm</a>(add, zero, neg, mul, one, r, c, a)),
+<a class="ln" id="L188" href="#L188">188</a>        Eq::congr(⟦add(mul(a, c), □)⟧, <a href="#L108">ring_mul_comm</a>(add, zero, neg, mul, one, r, c, b))
+<a class="ln" id="L189" href="#L189">189</a>      )
+<a class="ln" id="L190" href="#L190">190</a>    )
+<a class="ln" id="L191" href="#L191">191</a>  )
+<a class="ln" id="L192" href="#L192">192</a>}
+<a class="ln" id="L193" href="#L193">193</a>
+<a class="ln" id="L194" href="#L194">194</a><span class="kw">pub</span> <span class="kw">theorem</span> ring_mul_zero&lt;A&gt;(
+<a class="ln" id="L195" href="#L195">195</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L196" href="#L196">196</a>  zero: A,
+<a class="ln" id="L197" href="#L197">197</a>  neg: (A) -&gt; A,
+<a class="ln" id="L198" href="#L198">198</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L199" href="#L199">199</a>  one: A,
+<a class="ln" id="L200" href="#L200">200</a>  r: <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one),
+<a class="ln" id="L201" href="#L201">201</a>  a: A
+<a class="ln" id="L202" href="#L202">202</a>): mul(a, zero) = zero {
+<a class="ln" id="L203" href="#L203">203</a>  <span class="kw">let</span> g := <a href="#L76">ring_group</a>(add, zero, neg, mul, one, r)
+<a class="ln" id="L204" href="#L204">204</a>  <span class="kw">let</span> m := <a href="#L134">ring_add_monoid</a>(add, zero, neg, mul, one, r)
+<a class="ln" id="L205" href="#L205">205</a>  <span class="com">// a * 0 + a * 0 = a * (0 + 0) = a * 0 = a * 0 + 0</span>
+<a class="ln" id="L206" href="#L206">206</a>  <a href="../src/group.taut.html#L81">cancel_left</a>(
+<a class="ln" id="L207" href="#L207">207</a>    add,
+<a class="ln" id="L208" href="#L208">208</a>    zero,
+<a class="ln" id="L209" href="#L209">209</a>    neg,
+<a class="ln" id="L210" href="#L210">210</a>    g,
+<a class="ln" id="L211" href="#L211">211</a>    mul(a, zero),
+<a class="ln" id="L212" href="#L212">212</a>    mul(a, zero),
+<a class="ln" id="L213" href="#L213">213</a>    zero,
+<a class="ln" id="L214" href="#L214">214</a>    Eq::trans(
+<a class="ln" id="L215" href="#L215">215</a>      Eq::sym(<a href="#L120">ring_distrib_left</a>(add, zero, neg, mul, one, r, a, zero, zero)),
+<a class="ln" id="L216" href="#L216">216</a>      Eq::trans(
+<a class="ln" id="L217" href="#L217">217</a>        Eq::congr(⟦mul(a, □)⟧, <a href="../src/monoid.taut.html#L29">left_unit</a>(add, zero, m, zero)),
+<a class="ln" id="L218" href="#L218">218</a>        Eq::sym(<a href="../src/monoid.taut.html#L37">right_unit</a>(add, zero, m, mul(a, zero)))
+<a class="ln" id="L219" href="#L219">219</a>      )
+<a class="ln" id="L220" href="#L220">220</a>    )
+<a class="ln" id="L221" href="#L221">221</a>  )
+<a class="ln" id="L222" href="#L222">222</a>}
+<a class="ln" id="L223" href="#L223">223</a><span class="kw">pub</span> <span class="kw">theorem</span> ring_zero_mul&lt;A&gt;(
+<a class="ln" id="L224" href="#L224">224</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L225" href="#L225">225</a>  zero: A,
+<a class="ln" id="L226" href="#L226">226</a>  neg: (A) -&gt; A,
+<a class="ln" id="L227" href="#L227">227</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L228" href="#L228">228</a>  one: A,
+<a class="ln" id="L229" href="#L229">229</a>  r: <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one),
+<a class="ln" id="L230" href="#L230">230</a>  a: A
+<a class="ln" id="L231" href="#L231">231</a>): mul(zero, a) = zero {
+<a class="ln" id="L232" href="#L232">232</a>  Eq::trans(
+<a class="ln" id="L233" href="#L233">233</a>    <a href="#L108">ring_mul_comm</a>(add, zero, neg, mul, one, r, zero, a),
+<a class="ln" id="L234" href="#L234">234</a>    <a href="#L194">ring_mul_zero</a>(add, zero, neg, mul, one, r, a)
+<a class="ln" id="L235" href="#L235">235</a>  )
+<a class="ln" id="L236" href="#L236">236</a>}
+<a class="ln" id="L237" href="#L237">237</a>
+<a class="ln" id="L238" href="#L238">238</a><span class="com">// `(-a) * b = -(a * b)`: `a * b + (-a) * b = (a + -a) * b = 0 * b = 0`.</span>
+<a class="ln" id="L239" href="#L239">239</a><span class="kw">pub</span> <span class="kw">theorem</span> ring_neg_mul&lt;A&gt;(
+<a class="ln" id="L240" href="#L240">240</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L241" href="#L241">241</a>  zero: A,
+<a class="ln" id="L242" href="#L242">242</a>  neg: (A) -&gt; A,
+<a class="ln" id="L243" href="#L243">243</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L244" href="#L244">244</a>  one: A,
+<a class="ln" id="L245" href="#L245">245</a>  r: <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one),
+<a class="ln" id="L246" href="#L246">246</a>  a: A,
+<a class="ln" id="L247" href="#L247">247</a>  b: A
+<a class="ln" id="L248" href="#L248">248</a>): mul(neg(a), b) = neg(mul(a, b)) {
+<a class="ln" id="L249" href="#L249">249</a>  <span class="kw">let</span> g := <a href="#L76">ring_group</a>(add, zero, neg, mul, one, r)
+<a class="ln" id="L250" href="#L250">250</a>  <a href="../src/group.taut.html#L115">inverse_unique</a>(
+<a class="ln" id="L251" href="#L251">251</a>    add,
+<a class="ln" id="L252" href="#L252">252</a>    zero,
+<a class="ln" id="L253" href="#L253">253</a>    neg,
+<a class="ln" id="L254" href="#L254">254</a>    g,
+<a class="ln" id="L255" href="#L255">255</a>    mul(a, b),
+<a class="ln" id="L256" href="#L256">256</a>    mul(neg(a), b),
+<a class="ln" id="L257" href="#L257">257</a>    Eq::trans(
+<a class="ln" id="L258" href="#L258">258</a>      Eq::sym(<a href="#L171">ring_distrib_right</a>(add, zero, neg, mul, one, r, a, neg(a), b)),
+<a class="ln" id="L259" href="#L259">259</a>      Eq::trans(
+<a class="ln" id="L260" href="#L260">260</a>        Eq::congr(⟦mul(□, b)⟧, <a href="../src/group.taut.html#L34">inverse_right</a>(add, zero, neg, g, a)),
+<a class="ln" id="L261" href="#L261">261</a>        <a href="#L223">ring_zero_mul</a>(add, zero, neg, mul, one, r, b)
+<a class="ln" id="L262" href="#L262">262</a>      )
+<a class="ln" id="L263" href="#L263">263</a>    )
+<a class="ln" id="L264" href="#L264">264</a>  )
+<a class="ln" id="L265" href="#L265">265</a>}
+<a class="ln" id="L266" href="#L266">266</a><span class="kw">pub</span> <span class="kw">theorem</span> ring_mul_neg&lt;A&gt;(
+<a class="ln" id="L267" href="#L267">267</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L268" href="#L268">268</a>  zero: A,
+<a class="ln" id="L269" href="#L269">269</a>  neg: (A) -&gt; A,
+<a class="ln" id="L270" href="#L270">270</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L271" href="#L271">271</a>  one: A,
+<a class="ln" id="L272" href="#L272">272</a>  r: <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one),
+<a class="ln" id="L273" href="#L273">273</a>  a: A,
+<a class="ln" id="L274" href="#L274">274</a>  b: A
+<a class="ln" id="L275" href="#L275">275</a>): mul(a, neg(b)) = neg(mul(a, b)) {
+<a class="ln" id="L276" href="#L276">276</a>  Eq::trans(
+<a class="ln" id="L277" href="#L277">277</a>    <a href="#L108">ring_mul_comm</a>(add, zero, neg, mul, one, r, a, neg(b)),
+<a class="ln" id="L278" href="#L278">278</a>    Eq::trans(
+<a class="ln" id="L279" href="#L279">279</a>      <a href="#L239">ring_neg_mul</a>(add, zero, neg, mul, one, r, b, a),
+<a class="ln" id="L280" href="#L280">280</a>      Eq::congr(⟦neg(□)⟧, <a href="#L108">ring_mul_comm</a>(add, zero, neg, mul, one, r, b, a))
+<a class="ln" id="L281" href="#L281">281</a>    )
+<a class="ln" id="L282" href="#L282">282</a>  )
+<a class="ln" id="L283" href="#L283">283</a>}
+<a class="ln" id="L284" href="#L284">284</a><span class="kw">pub</span> <span class="kw">theorem</span> ring_neg_neg&lt;A&gt;(
+<a class="ln" id="L285" href="#L285">285</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L286" href="#L286">286</a>  zero: A,
+<a class="ln" id="L287" href="#L287">287</a>  neg: (A) -&gt; A,
+<a class="ln" id="L288" href="#L288">288</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L289" href="#L289">289</a>  one: A,
+<a class="ln" id="L290" href="#L290">290</a>  r: <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one),
+<a class="ln" id="L291" href="#L291">291</a>  a: A
+<a class="ln" id="L292" href="#L292">292</a>): neg(neg(a)) = a {
+<a class="ln" id="L293" href="#L293">293</a>  <a href="../src/group.taut.html#L130">inverse_involution</a>(add, zero, neg, <a href="#L76">ring_group</a>(add, zero, neg, mul, one, r), a)
+<a class="ln" id="L294" href="#L294">294</a>}
+<a class="ln" id="L295" href="#L295">295</a><span class="kw">pub</span> <span class="kw">theorem</span> ring_neg_zero&lt;A&gt;(
+<a class="ln" id="L296" href="#L296">296</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L297" href="#L297">297</a>  zero: A,
+<a class="ln" id="L298" href="#L298">298</a>  neg: (A) -&gt; A,
+<a class="ln" id="L299" href="#L299">299</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L300" href="#L300">300</a>  one: A,
+<a class="ln" id="L301" href="#L301">301</a>  r: <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one)
+<a class="ln" id="L302" href="#L302">302</a>): neg(zero) = zero {
+<a class="ln" id="L303" href="#L303">303</a>  <a href="../src/group.taut.html#L143">inverse_unit</a>(add, zero, neg, <a href="#L76">ring_group</a>(add, zero, neg, mul, one, r))
+<a class="ln" id="L304" href="#L304">304</a>}
+<a class="ln" id="L305" href="#L305">305</a><span class="kw">pub</span> <span class="kw">theorem</span> ring_neg_add&lt;A&gt;(
+<a class="ln" id="L306" href="#L306">306</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L307" href="#L307">307</a>  zero: A,
+<a class="ln" id="L308" href="#L308">308</a>  neg: (A) -&gt; A,
+<a class="ln" id="L309" href="#L309">309</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L310" href="#L310">310</a>  one: A,
+<a class="ln" id="L311" href="#L311">311</a>  r: <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one),
+<a class="ln" id="L312" href="#L312">312</a>  a: A,
+<a class="ln" id="L313" href="#L313">313</a>  b: A
+<a class="ln" id="L314" href="#L314">314</a>): neg(add(a, b)) = add(neg(a), neg(b)) {
+<a class="ln" id="L315" href="#L315">315</a>  Eq::trans(
+<a class="ln" id="L316" href="#L316">316</a>    <a href="../src/group.taut.html#L155">inverse_product</a>(add, zero, neg, <a href="#L76">ring_group</a>(add, zero, neg, mul, one, r), a, b),
+<a class="ln" id="L317" href="#L317">317</a>    <a href="#L86">ring_add_comm</a>(add, zero, neg, mul, one, r, neg(b), neg(a))
+<a class="ln" id="L318" href="#L318">318</a>  )
+<a class="ln" id="L319" href="#L319">319</a>}
+<a class="ln" id="L320" href="#L320">320</a>
+<a class="ln" id="L321" href="#L321">321</a><span class="com">// `a + -b = 0` makes `a = b`.</span>
+<a class="ln" id="L322" href="#L322">322</a><span class="kw">pub</span> <span class="kw">theorem</span> ring_eq_of_sub&lt;A&gt;(
+<a class="ln" id="L323" href="#L323">323</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L324" href="#L324">324</a>  zero: A,
+<a class="ln" id="L325" href="#L325">325</a>  neg: (A) -&gt; A,
+<a class="ln" id="L326" href="#L326">326</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L327" href="#L327">327</a>  one: A,
+<a class="ln" id="L328" href="#L328">328</a>  r: <a href="#L9">CommRing</a>(A, add, zero, neg, mul, one),
+<a class="ln" id="L329" href="#L329">329</a>  a: A,
+<a class="ln" id="L330" href="#L330">330</a>  b: A,
+<a class="ln" id="L331" href="#L331">331</a>  h: add(a, neg(b)) = zero
+<a class="ln" id="L332" href="#L332">332</a>): a = b {
+<a class="ln" id="L333" href="#L333">333</a>  <span class="kw">let</span> g := <a href="#L76">ring_group</a>(add, zero, neg, mul, one, r)
+<a class="ln" id="L334" href="#L334">334</a>  <span class="com">// -b = -a, so a = --a = --b = b.</span>
+<a class="ln" id="L335" href="#L335">335</a>  Eq::trans(
+<a class="ln" id="L336" href="#L336">336</a>    Eq::sym(<a href="#L284">ring_neg_neg</a>(add, zero, neg, mul, one, r, a)),
+<a class="ln" id="L337" href="#L337">337</a>    Eq::trans(
+<a class="ln" id="L338" href="#L338">338</a>      Eq::congr(⟦neg(□)⟧, Eq::sym(<a href="../src/group.taut.html#L115">inverse_unique</a>(add, zero, neg, g, a, neg(b), h))),
+<a class="ln" id="L339" href="#L339">339</a>      <a href="#L284">ring_neg_neg</a>(add, zero, neg, mul, one, r, b)
+<a class="ln" id="L340" href="#L340">340</a>    )
+<a class="ln" id="L341" href="#L341">341</a>  )
+<a class="ln" id="L342" href="#L342">342</a>}
+<a class="ln" id="L343" href="#L343">343</a>
+<a class="ln" id="L344" href="#L344">344</a><span class="com">// In a domain, a nonzero factor cancels: `a * k = b * k` and `k ≠ 0` make `a = b`.</span>
+<a class="ln" id="L345" href="#L345">345</a><span class="kw">pub</span> <span class="kw">theorem</span> domain_cancel&lt;A&gt;(
+<a class="ln" id="L346" href="#L346">346</a>  add: (A, A) -&gt; A,
+<a class="ln" id="L347" href="#L347">347</a>  zero: A,
+<a class="ln" id="L348" href="#L348">348</a>  neg: (A) -&gt; A,
+<a class="ln" id="L349" href="#L349">349</a>  mul: (A, A) -&gt; A,
+<a class="ln" id="L350" href="#L350">350</a>  one: A,
+<a class="ln" id="L351" href="#L351">351</a>  d: <a href="#L27">IntegralDomain</a>(A, add, zero, neg, mul, one),
+<a class="ln" id="L352" href="#L352">352</a>  a: A,
+<a class="ln" id="L353" href="#L353">353</a>  b: A,
+<a class="ln" id="L354" href="#L354">354</a>  k: A,
+<a class="ln" id="L355" href="#L355">355</a>  nonzero: (k = zero) -&gt; False,
+<a class="ln" id="L356" href="#L356">356</a>  h: mul(a, k) = mul(b, k)
+<a class="ln" id="L357" href="#L357">357</a>): a = b {
+<a class="ln" id="L358" href="#L358">358</a>  <span class="kw">let</span> r := <a href="#L42">domain_ring</a>(add, zero, neg, mul, one, d)
+<a class="ln" id="L359" href="#L359">359</a>  <span class="kw">let</span> g := <a href="#L76">ring_group</a>(add, zero, neg, mul, one, r)
+<a class="ln" id="L360" href="#L360">360</a>  <span class="com">// (a + -b) * k = a * k + -(b * k) = b * k + -(b * k) = 0</span>
+<a class="ln" id="L361" href="#L361">361</a>  <span class="kw">let</span> product: mul(
+<a class="ln" id="L362" href="#L362">362</a>    add(a, neg(b)),
+<a class="ln" id="L363" href="#L363">363</a>    k
+<a class="ln" id="L364" href="#L364">364</a>  ) = zero := Eq::trans(
+<a class="ln" id="L365" href="#L365">365</a>    <a href="#L171">ring_distrib_right</a>(add, zero, neg, mul, one, r, a, neg(b), k),
+<a class="ln" id="L366" href="#L366">366</a>    Eq::trans(
+<a class="ln" id="L367" href="#L367">367</a>      Eq::congr(⟦add(mul(a, k), □)⟧, <a href="#L239">ring_neg_mul</a>(add, zero, neg, mul, one, r, b, k)),
+<a class="ln" id="L368" href="#L368">368</a>      Eq::trans(Eq::congr(⟦add(□, neg(mul(b, k)))⟧, h), <a href="../src/group.taut.html#L34">inverse_right</a>(add, zero, neg, g, mul(b, k)))
+<a class="ln" id="L369" href="#L369">369</a>    )
+<a class="ln" id="L370" href="#L370">370</a>  )
+<a class="ln" id="L371" href="#L371">371</a>  ⊢ a = b <span class="kw">from</span> <span class="kw">match</span> domain_no_zero_divisors(add, zero, neg, mul, one, d, add(a, neg(b)), k, product) {
+<a class="ln" id="L372" href="#L372">372</a>    OrInl(diff) =&gt; ring_eq_of_sub(add, zero, neg, mul, one, r, a, b, diff)
+<a class="ln" id="L373" href="#L373">373</a>    OrInr(kz) =&gt; False::elim(nonzero(kz))
+<a class="ln" id="L374" href="#L374">374</a>  }
+<a class="ln" id="L375" href="#L375">375</a>}
+</code></pre>
+</html>

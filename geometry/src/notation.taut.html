@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>src/notation.taut</title><style>:root{color-scheme:light dark;--bg:#fff;--fg:#1f2328;--mut:#6e7781;--kw:#cf222e;--str:#0a3069;--num:#0550ae;--com:#6e7781;--mac:#8250df;--ty:#953800;--fn:#6639ba;--var:#116329;--link:#0969da;--sel:#fff8c5}@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--mut:#7d8590;--kw:#ff7b72;--str:#a5d6ff;--num:#79c0ff;--com:#8b949e;--mac:#d2a8ff;--ty:#ffa657;--fn:#d2a8ff;--var:#7ee787;--link:#58a6ff;--sel:#3a3000}}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}nav,main{padding:8px 16px}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}pre{margin:0;padding:8px 0;font:13px/1.5 ui-monospace,monospace;overflow-x:auto}pre a{color:inherit}pre a[href^="#"],pre a[href*=".html"]{text-decoration:underline dotted}.ln{display:inline-block;width:5ch;margin-right:2ch;text-align:right;color:var(--mut);user-select:none;text-decoration:none!important}.ln:target{background:var(--sel)}.kw{color:var(--kw)}.str{color:var(--str)}.num{color:var(--num)}.com{color:var(--com)}.mac{color:var(--mac)}.ty{color:var(--ty)}.fn{color:var(--fn)}.var{color:var(--var)}ul{list-style:none;padding-left:0}li li{padding-left:2ch}.kind{color:var(--mut)}</style>
+<nav><a href="../index.html">index</a> / src/notation.taut</nav>
+<pre><code><a class="ln" id="L1" href="#L1">1</a><span class="kw">import</span> std::Base
+<a class="ln" id="L2" href="#L2">2</a><span class="kw">import</span> std::prelude::Macro
+<a class="ln" id="L3" href="#L3">3</a><span class="kw">import</span> core::highlight
+<a class="ln" id="L4" href="#L4">4</a><span class="kw">import</span> <span class="str">&quot;point.taut&quot;</span>
+<a class="ln" id="L5" href="#L5">5</a>
+<a class="ln" id="L6" href="#L6">6</a><span class="kw">pub</span> <span class="kw">fn</span> geo_tokens(ts: List(SynTok)): List(SynHighlight) ! {Div} { math_tokens(ts) }
+<a class="ln" id="L7" href="#L7">7</a>
+<a class="ln" id="L8" href="#L8">8</a><span class="com">// `geo!(`add, zero, neg, mul, one; AB ∥ DC ∧ ¬(AB ∥ AD)`)`: statements about</span>
+<a class="ln" id="L9" href="#L9">9</a><span class="com">// points of the plane over a ring, written with the ring's operations so that</span>
+<a class="ln" id="L10" href="#L10">10</a><span class="com">// `ring_norm!` reads them. A point is a capital letter naming a variable of</span>
+<a class="ln" id="L11" href="#L11">11</a><span class="com">// type `Point(K)`, and a segment is two of them, `AB` from A to B.</span>
+<a class="ln" id="L12" href="#L12">12</a><span class="com">//</span>
+<a class="ln" id="L13" href="#L13">13</a><span class="com">// - `AB ∥ CD`: the cross product of B - A and D - C is 0.</span>
+<a class="ln" id="L14" href="#L14">14</a><span class="com">// - `AB ≅ CD`: the two squared lengths are the same (no square roots in a ring).</span>
+<a class="ln" id="L15" href="#L15">15</a><span class="com">// - `¬ R`: R is false. `R ∧ S`: both.</span>
+<a class="ln" id="L16" href="#L16">16</a><span class="kw">syntax!</span>(geo_notation, ```par
+<a class="ln" id="L17" href="#L17">17</a><span class="kw">%start</span> <span class="ty">Expr</span>
+<a class="ln" id="L18" href="#L18">18</a><span class="kw">%title</span> <span class="str">&quot;plane geometry&quot;</span>
+<a class="ln" id="L19" href="#L19">19</a><span class="kw">%%</span>
+<a class="ln" id="L20" href="#L20">20</a><span class="ty">Expr</span>: <span class="ty">Header</span> <span class="ty">Comma</span> <span class="ty">Header</span> <span class="ty">Comma</span> <span class="ty">Header</span> <span class="ty">Comma</span> <span class="ty">Header</span> <span class="ty">Comma</span> <span class="ty">Header</span> <span class="ty">Semi</span> <span class="ty">Formula</span>;
+<a class="ln" id="L21" href="#L21">21</a><span class="ty">Header</span>: <span class="ty">Name</span> | <span class="ty">Embed</span>;
+<a class="ln" id="L22" href="#L22">22</a><span class="ty">Formula</span>: <span class="ty">Clause</span> { <span class="ty">Conj</span> <span class="ty">Clause</span> };
+<a class="ln" id="L23" href="#L23">23</a><span class="ty">Clause</span>: <span class="ty">Negation</span> | <span class="ty">Relation</span> | <span class="ty">Group</span>;
+<a class="ln" id="L24" href="#L24">24</a><span class="ty">Negation</span>: <span class="ty">Not</span> <span class="ty">Clause</span>;
+<a class="ln" id="L25" href="#L25">25</a><span class="ty">Group</span>: <span class="ty">LParen</span> <span class="ty">Formula</span> <span class="ty">RParen</span>;
+<a class="ln" id="L26" href="#L26">26</a><span class="ty">Relation</span>: <span class="ty">Segment</span> <span class="ty">RelOp</span> <span class="ty">Segment</span>;
+<a class="ln" id="L27" href="#L27">27</a><span class="ty">RelOp</span>: <span class="ty">Parallel</span> | <span class="ty">Congruent</span>;
+<a class="ln" id="L28" href="#L28">28</a><span class="ty">Embed</span>: <span class="ty">TautoExpr</span>;
+<a class="ln" id="L29" href="#L29">29</a><span class="ty">Name</span>: <span class="str">/[a-z_][_\p{L}\p{N}']*(::[_\p{L}][_\p{L}\p{N}']*)*/</span>;
+<a class="ln" id="L30" href="#L30">30</a><span class="ty">Segment</span>: <span class="str">/[A-Z][A-Z]/</span>;
+<a class="ln" id="L31" href="#L31">31</a><span class="ty">Parallel</span>: <span class="str">'∥'</span>;
+<a class="ln" id="L32" href="#L32">32</a><span class="ty">Congruent</span>: <span class="str">'≅'</span>;
+<a class="ln" id="L33" href="#L33">33</a><span class="ty">Not</span>: <span class="str">'¬'</span>;
+<a class="ln" id="L34" href="#L34">34</a><span class="ty">Conj</span>: <span class="str">'∧'</span>;
+<a class="ln" id="L35" href="#L35">35</a><span class="ty">Comma</span>: <span class="str">','</span>;
+<a class="ln" id="L36" href="#L36">36</a><span class="ty">Semi</span>: <span class="str">';'</span>;
+<a class="ln" id="L37" href="#L37">37</a><span class="ty">LParen</span>: <span class="str">'('</span>;
+<a class="ln" id="L38" href="#L38">38</a><span class="ty">RParen</span>: <span class="str">')'</span>;
+<a class="ln" id="L39" href="#L39">39</a>```, <span class="kw">with</span>(tokens: geo_tokens)) =&gt; <span class="kw">struct</span> Expr, <span class="kw">enum</span> Header, <span class="kw">struct</span> Formula, <span class="kw">struct</span> Formula_Rep1, <span class="kw">enum</span> Clause, <span class="kw">struct</span> Negation, <span class="kw">struct</span> Group, <span class="kw">struct</span> Relation, <span class="kw">enum</span> RelOp, <span class="kw">fn</span> parse
+<a class="ln" id="L40" href="#L40">40</a>
+<a class="ln" id="L41" href="#L41">41</a><span class="kw">pub(open)</span> <span class="kw">struct</span> GeoSyn { add: SynExpr, zero: SynExpr, neg: SynExpr, mul: SynExpr, one: SynExpr }
+<a class="ln" id="L42" href="#L42">42</a>
+<a class="ln" id="L43" href="#L43">43</a><span class="kw">pub</span> <span class="kw">fn</span> geo_header(h: geo_notation::Header): SynExpr {
+<a class="ln" id="L44" href="#L44">44</a>  <span class="kw">match</span> h {
+<a class="ln" id="L45" href="#L45">45</a>    Name(t) =&gt; ExVar(Syn::ident(t))
+<a class="ln" id="L46" href="#L46">46</a>    Embed(e) =&gt; e
+<a class="ln" id="L47" href="#L47">47</a>  }
+<a class="ln" id="L48" href="#L48">48</a>}
+<a class="ln" id="L49" href="#L49">49</a>
+<a class="ln" id="L50" href="#L50">50</a><span class="com">// The `i`-th letter of a segment, as the variable of that point.</span>
+<a class="ln" id="L51" href="#L51">51</a><span class="kw">pub</span> <span class="kw">fn</span> geo_point(t: SynToken, i: u64): SynExpr ! {macro_error} {
+<a class="ln" id="L52" href="#L52">52</a>  <span class="kw">match</span> Text::slice(t.text, i, i + <span class="num">1</span>) {
+<a class="ln" id="L53" href="#L53">53</a>    None =&gt; Syn::error(t.span, <span class="str">&quot;geo!: a segment is two capital letters&quot;</span>)
+<a class="ln" id="L54" href="#L54">54</a>    Some(c) =&gt; ExVar(Syn::ident(SynToken { text: c, span: t.span, ctx: t.ctx }))
+<a class="ln" id="L55" href="#L55">55</a>  }
+<a class="ln" id="L56" href="#L56">56</a>}
+<a class="ln" id="L57" href="#L57">57</a>
+<a class="ln" id="L58" href="#L58">58</a><span class="com">// `a - b` in the ring.</span>
+<a class="ln" id="L59" href="#L59">59</a><span class="kw">pub</span> <span class="kw">fn</span> geo_sub(o: <a href="#L41">GeoSyn</a>, a: SynExpr, b: SynExpr): SynExpr {
+<a class="ln" id="L60" href="#L60">60</a>  <span class="kw">let</span> add := o.add
+<a class="ln" id="L61" href="#L61">61</a>  <span class="kw">let</span> neg := o.neg
+<a class="ln" id="L62" href="#L62">62</a>  <span class="kw">quote</span> { $add($a, $neg($b)) }
+<a class="ln" id="L63" href="#L63">63</a>}
+<a class="ln" id="L64" href="#L64">64</a>
+<a class="ln" id="L65" href="#L65">65</a><span class="com">// The two coordinates of the vector of a segment, from its first point to its second.</span>
+<a class="ln" id="L66" href="#L66">66</a><span class="kw">pub</span> <span class="kw">fn</span> geo_vector(o: <a href="#L41">GeoSyn</a>, t: SynToken): SynExpr × SynExpr ! {macro_error} {
+<a class="ln" id="L67" href="#L67">67</a>  <span class="kw">let</span> p := <a href="#L51">geo_point</a>(t, <span class="num">0</span>)
+<a class="ln" id="L68" href="#L68">68</a>  <span class="kw">let</span> q := <a href="#L51">geo_point</a>(t, <span class="num">1</span>)
+<a class="ln" id="L69" href="#L69">69</a>  #(geo_sub(o, <span class="kw">quote</span> { px($q) }, <span class="kw">quote</span> { px($p) }), geo_sub(o, <span class="kw">quote</span> { py($q) }, <span class="kw">quote</span> { py($p) }))
+<a class="ln" id="L70" href="#L70">70</a>}
+<a class="ln" id="L71" href="#L71">71</a>
+<a class="ln" id="L72" href="#L72">72</a><span class="kw">pub</span> <span class="kw">fn</span> geo_relation(o: <a href="#L41">GeoSyn</a>, r: geo_notation::Relation): SynExpr ! {macro_error} {
+<a class="ln" id="L73" href="#L73">73</a>  <span class="kw">match</span> <a href="#L66">geo_vector</a>(o, r.segment) {
+<a class="ln" id="L74" href="#L74">74</a>    #(u1, u2) =&gt; <span class="kw">match</span> <a href="#L66">geo_vector</a>(o, r.segment_2) {
+<a class="ln" id="L75" href="#L75">75</a>      #(v1, v2) =&gt; {
+<a class="ln" id="L76" href="#L76">76</a>        <span class="kw">let</span> add := o.add
+<a class="ln" id="L77" href="#L77">77</a>        <span class="kw">let</span> neg := o.neg
+<a class="ln" id="L78" href="#L78">78</a>        <span class="kw">let</span> mul := o.mul
+<a class="ln" id="L79" href="#L79">79</a>        <span class="kw">let</span> zero := o.zero
+<a class="ln" id="L80" href="#L80">80</a>        <span class="kw">match</span> r.rel_op {
+<a class="ln" id="L81" href="#L81">81</a>          Parallel(t) =&gt; <span class="kw">quote</span> { $add($mul($u1, $v2), $neg($mul($u2, $v1))) = $zero }
+<a class="ln" id="L82" href="#L82">82</a>          Congruent(t) =&gt; <span class="kw">quote</span> {
+<a class="ln" id="L83" href="#L83">83</a>            $add($mul($u1, $u1), $mul($u2, $u2)) = $add($mul($v1, $v1), $mul($v2, $v2))
+<a class="ln" id="L84" href="#L84">84</a>          }
+<a class="ln" id="L85" href="#L85">85</a>        }
+<a class="ln" id="L86" href="#L86">86</a>      }
+<a class="ln" id="L87" href="#L87">87</a>    }
+<a class="ln" id="L88" href="#L88">88</a>  }
+<a class="ln" id="L89" href="#L89">89</a>}
+<a class="ln" id="L90" href="#L90">90</a>
+<a class="ln" id="L91" href="#L91">91</a><span class="kw">pub</span> <span class="kw">fn</span> geo_clause(o: <a href="#L41">GeoSyn</a>, c: geo_notation::Clause): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L92" href="#L92">92</a>  <span class="kw">match</span> c {
+<a class="ln" id="L93" href="#L93">93</a>    Negation(n) =&gt; {
+<a class="ln" id="L94" href="#L94">94</a>      <span class="kw">let</span> p := geo_clause(o, n.clause)
+<a class="ln" id="L95" href="#L95">95</a>      <span class="kw">quote</span> { ($p) -&gt; False }
+<a class="ln" id="L96" href="#L96">96</a>    }
+<a class="ln" id="L97" href="#L97">97</a>    Group(g) =&gt; <a href="#L116">geo_formula</a>(o, g.formula)
+<a class="ln" id="L98" href="#L98">98</a>    Relation(r) =&gt; <a href="#L72">geo_relation</a>(o, r)
+<a class="ln" id="L99" href="#L99">99</a>  }
+<a class="ln" id="L100" href="#L100">100</a>}
+<a class="ln" id="L101" href="#L101">101</a>
+<a class="ln" id="L102" href="#L102">102</a><span class="kw">pub</span> <span class="kw">fn</span> geo_conjuncts(
+<a class="ln" id="L103" href="#L103">103</a>  o: <a href="#L41">GeoSyn</a>,
+<a class="ln" id="L104" href="#L104">104</a>  acc: SynExpr,
+<a class="ln" id="L105" href="#L105">105</a>  xs: List(geo_notation::Formula_Rep1)
+<a class="ln" id="L106" href="#L106">106</a>): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L107" href="#L107">107</a>  <span class="kw">match</span> xs {
+<a class="ln" id="L108" href="#L108">108</a>    Nil =&gt; acc
+<a class="ln" id="L109" href="#L109">109</a>    Cons(x, rest) =&gt; {
+<a class="ln" id="L110" href="#L110">110</a>      <span class="kw">let</span> b := geo_clause(o, x.clause)
+<a class="ln" id="L111" href="#L111">111</a>      geo_conjuncts(o, <span class="kw">quote</span> { $acc ∧ $b }, rest)
+<a class="ln" id="L112" href="#L112">112</a>    }
+<a class="ln" id="L113" href="#L113">113</a>  }
+<a class="ln" id="L114" href="#L114">114</a>}
+<a class="ln" id="L115" href="#L115">115</a>
+<a class="ln" id="L116" href="#L116">116</a><span class="kw">pub</span> <span class="kw">fn</span> geo_formula(o: <a href="#L41">GeoSyn</a>, f: geo_notation::Formula): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L117" href="#L117">117</a>  <a href="#L102">geo_conjuncts</a>(o, <a href="#L91">geo_clause</a>(o, f.clause), f.rep)
+<a class="ln" id="L118" href="#L118">118</a>}
+<a class="ln" id="L119" href="#L119">119</a>
+<a class="ln" id="L120" href="#L120">120</a><span class="kw">pub</span> <span class="kw">macro</span> <span class="kw">fn</span> geo(e: geo_notation::Expr): SynExpr ! {macro_error, Div} {
+<a class="ln" id="L121" href="#L121">121</a>  <span class="kw">let</span> o := GeoSyn {
+<a class="ln" id="L122" href="#L122">122</a>    add: <a href="#L43">geo_header</a>(e.header),
+<a class="ln" id="L123" href="#L123">123</a>    zero: <a href="#L43">geo_header</a>(e.header_2),
+<a class="ln" id="L124" href="#L124">124</a>    neg: <a href="#L43">geo_header</a>(e.header_3),
+<a class="ln" id="L125" href="#L125">125</a>    mul: <a href="#L43">geo_header</a>(e.header_4),
+<a class="ln" id="L126" href="#L126">126</a>    one: <a href="#L43">geo_header</a>(e.header_5)
+<a class="ln" id="L127" href="#L127">127</a>  }
+<a class="ln" id="L128" href="#L128">128</a>  <a href="#L116">geo_formula</a>(o, e.formula)
+<a class="ln" id="L129" href="#L129">129</a>}
+</code></pre>
+</html>
